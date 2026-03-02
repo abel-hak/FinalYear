@@ -6,6 +6,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
+from app.api import auth as auth_routes
+from app.api import quests as quest_routes
+from app.api import progress as progress_routes
+from app.api import admin as admin_routes
 
 app = FastAPI(
     title="CodeQuest API",
@@ -23,6 +27,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+api_prefix = get_settings().api_prefix
+
+# Mount API routers under the configured prefix (e.g. /api/v1)
+app.include_router(auth_routes.router, prefix=api_prefix)
+app.include_router(quest_routes.router, prefix=api_prefix)
+app.include_router(progress_routes.router, prefix=api_prefix)
+app.include_router(admin_routes.router, prefix=api_prefix)
 
 
 @app.get("/health")
