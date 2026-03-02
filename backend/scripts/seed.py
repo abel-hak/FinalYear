@@ -1,5 +1,7 @@
 """
-Seed script: creates one Learner, one Admin, and two sample Quests with TestCases.
+Seed script: creates one Learner, one Admin, and three sample Quests with TestCases.
+Uses passlib (bcrypt) for password hashing so seeded users work with auth in M3+.
+
 Run from backend dir: python -m scripts.seed
 Requires: DATABASE_URL_SYNC or DATABASE_URL set (sync URL used for script).
 """
@@ -21,7 +23,7 @@ if env_path.exists():
                 k, v = line.split("=", 1)
                 os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Use sync URL
@@ -39,9 +41,10 @@ from app.models.admin import Admin
 from app.models.quest import Quest
 from app.models.test_case import TestCase
 
-# Simple hash for seed only (real auth uses passlib in M3+)
-def _fake_hash(password: str) -> str:
-    return "seed_hash_" + password
+# Real password hashing so M3 login works with seeded users
+def _hash_password(password: str) -> str:
+    from passlib.context import CryptContext
+    return CryptContext(schemes=["bcrypt"], deprecated="auto").hash(password)
 
 engine = create_engine(database_url)
 Session = sessionmaker(bind=engine)
@@ -59,7 +62,7 @@ def seed():
             id=uuid.uuid4(),
             username="learner1",
             email="learner@codequest.dev",
-            password_hash=_fake_hash("learner123"),
+            password_hash=_hash_password("learner123"),
             role="learner",
         )
         session.add(learner_user)
@@ -77,7 +80,7 @@ def seed():
             id=uuid.uuid4(),
             username="admin1",
             email="admin@codequest.dev",
-            password_hash=_fake_hash("admin123"),
+            password_hash=_hash_password("admin123"),
             role="admin",
         )
         session.add(admin_user)
@@ -131,8 +134,31 @@ def seed():
             is_hidden=False,
         ))
 
+        # 5) Quest 3: Fix a condition
+        q3 = Quest(
+            id=uuid.uuid4(),
+            title="Fix the condition",
+            description="The code should print 'even' when n is 4. Fix the condition.",
+            level=1,
+            order_rank=3,
+            initial_code='n = 4\nif n % 2 == 1:\n    print("even")\nelse:\n    print("odd")',
+            solution_code='n = 4\nif n % 2 == 0:\n    print("even")\nelse:\n    print("odd")',
+            explanation="n % 2 == 0 is True for even numbers. Use == 0 for 'even', not == 1.",
+        )
+        session.add(q3)
+        session.flush()
+        session.add(TestCase(
+            id=uuid.uuid4(),
+            quest_id=q3.id,
+            input_data=None,
+            expected_output="even\n",
+            is_hidden=False,
+        ))
+
         session.commit()
-        print("Seeded: 1 learner, 1 admin, 2 quests with test cases.")
+        print("Seeded: 1 learner, 1 admin, 3 quests with test cases.")
+        print("  Learner: learner@codequest.dev / learner123")
+        print("  Admin:   admin@codequest.dev / admin123")
     except Exception as e:
         session.rollback()
         print(f"Seed failed: {e}")

@@ -60,8 +60,14 @@ FinalYear/
 | M | Name              | Status   |
 |---|-------------------|----------|
 | 1 | Project setup     | Done     |
-| 2 | Database & models | Done (in M1) |
+| 2 | Database & models | Done     |
 | 3 | Backend APIs      | Pending  |
 | 4 | Frontend UI       | Pending  |
 | 5 | Auth & security   | Pending  |
 | 6 | Hints & tests     | Pending  |
+
+### M2: Schema and seed
+
+- Indexes added for progress and test-case lookups (migration `002`).
+- Seed uses bcrypt so seeded users work with login in M3.
+- Seeded: 1 learner, 1 admin, 3 quests with test cases. See [docs/SCHEMA.md](docs/SCHEMA.md).
