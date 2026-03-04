@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import "./globals.css";
+import { AuthShell } from "@/components/layout/AuthShell";
 
 export const metadata: Metadata = {
   title: "CodeQuest",
@@ -13,8 +15,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen">
-        {children}
+      <body className="antialiased min-h-screen bg-slate-950 text-slate-50">
+        {/* Simple outer shell with header that can react to auth state */}
+        <AuthShell>{children}</AuthShell>
       </body>
     </html>
   );

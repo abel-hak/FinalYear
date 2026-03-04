@@ -98,37 +98,37 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <main className="min-h-screen p-6">
+    <main className="min-h-screen bg-slate-950 p-6 text-slate-50">
       <div className="mx-auto max-w-5xl space-y-6">
         <header className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Admin Dashboard</h1>
-            <p className="mt-1 text-sm text-slate-600">Manage quests and test cases.</p>
+            <h1 className="text-2xl font-bold text-emerald-300">Admin Dashboard</h1>
+            <p className="mt-1 text-sm text-slate-300">Manage quests and test cases.</p>
           </div>
-          <Link href="/" className="text-sm text-slate-500 underline hover:text-slate-700">
+          <Link href="/" className="text-sm text-slate-400 underline hover:text-slate-200">
             Back to home
           </Link>
         </header>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-red-400">{error}</p>}
 
-        <section className="rounded border bg-slate-50 p-4">
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Create quest</h2>
+        <section className="rounded border border-slate-800 bg-slate-900 p-4">
+          <h2 className="mb-3 text-sm font-semibold text-slate-100">Create quest</h2>
           <form onSubmit={handleCreateQuest} className="grid gap-3 md:grid-cols-2">
             <div className="md:col-span-1">
-              <label className="block text-xs font-medium text-slate-700">Title</label>
+              <label className="block text-xs font-medium text-slate-200">Title</label>
               <input
-                className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                className="mt-1 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-slate-50 placeholder:text-slate-500"
                 value={newQuest.title}
                 onChange={(e) => setNewQuest({ ...newQuest, title: e.target.value })}
                 required
               />
             </div>
             <div className="md:col-span-1">
-              <label className="block text-xs font-medium text-slate-700">Order</label>
+              <label className="block text-xs font-medium text-slate-200">Order</label>
               <input
                 type="number"
-                className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                className="mt-1 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-slate-50"
                 value={newQuest.order_rank}
                 onChange={(e) =>
                   setNewQuest({ ...newQuest, order_rank: Number(e.target.value) || 1 })
@@ -137,19 +137,19 @@ export default function AdminDashboardPage() {
               />
             </div>
             <div className="md:col-span-1">
-              <label className="block text-xs font-medium text-slate-700">Level</label>
+              <label className="block text-xs font-medium text-slate-200">Level</label>
               <input
                 type="number"
-                className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                className="mt-1 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-slate-50"
                 value={newQuest.level}
                 onChange={(e) => setNewQuest({ ...newQuest, level: Number(e.target.value) || 1 })}
                 required
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-slate-700">Description</label>
+              <label className="block text-xs font-medium text-slate-200">Description</label>
               <textarea
-                className="mt-1 w-full rounded border px-2 py-1 text-sm"
+                className="mt-1 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-slate-50 placeholder:text-slate-500"
                 rows={2}
                 value={newQuest.description}
                 onChange={(e) => setNewQuest({ ...newQuest, description: e.target.value })}
@@ -157,9 +157,9 @@ export default function AdminDashboardPage() {
               />
             </div>
             <div className="md:col-span-1">
-              <label className="block text-xs font-medium text-slate-700">Initial code</label>
+              <label className="block text-xs font-medium text-slate-200">Initial code</label>
               <textarea
-                className="mt-1 w-full rounded border px-2 py-1 text-xs font-mono"
+                className="mt-1 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs font-mono text-slate-50 placeholder:text-slate-500"
                 rows={3}
                 value={newQuest.initial_code}
                 onChange={(e) => setNewQuest({ ...newQuest, initial_code: e.target.value })}
@@ -167,9 +167,9 @@ export default function AdminDashboardPage() {
               />
             </div>
             <div className="md:col-span-1">
-              <label className="block text-xs font-medium text-slate-700">Solution code</label>
+              <label className="block text-xs font-medium text-slate-200">Solution code</label>
               <textarea
-                className="mt-1 w-full rounded border px-2 py-1 text-xs font-mono"
+                className="mt-1 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs font-mono text-slate-50 placeholder:text-slate-500"
                 rows={3}
                 value={newQuest.solution_code}
                 onChange={(e) => setNewQuest({ ...newQuest, solution_code: e.target.value })}
@@ -177,9 +177,9 @@ export default function AdminDashboardPage() {
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-medium text-slate-700">Explanation</label>
+              <label className="block text-xs font-medium text-slate-200">Explanation</label>
               <textarea
-                className="mt-1 w-full rounded border px-2 py-1 text-xs"
+                className="mt-1 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-50 placeholder:text-slate-500"
                 rows={2}
                 value={newQuest.explanation}
                 onChange={(e) => setNewQuest({ ...newQuest, explanation: e.target.value })}
@@ -198,20 +198,23 @@ export default function AdminDashboardPage() {
         </section>
 
         <section>
-          <h2 className="mb-3 text-sm font-semibold text-slate-700">Existing quests</h2>
+          <h2 className="mb-3 text-sm font-semibold text-slate-100">Existing quests</h2>
           <div className="space-y-2">
             {quests.length === 0 && (
-              <p className="text-sm text-slate-500">No quests yet. Create one above.</p>
+              <p className="text-sm text-slate-400">No quests yet. Create one above.</p>
             )}
             {quests.map((q) => (
-              <div key={q.id} className="flex items-center justify-between rounded border px-4 py-3 text-sm">
+              <div
+                key={q.id}
+                className="flex items-center justify-between rounded border border-slate-800 bg-slate-900 px-4 py-3 text-sm"
+              >
                 <div>
-                  <p className="font-semibold text-slate-800">
+                  <p className="font-semibold text-slate-100">
                     {q.order_rank}. {q.title} (level {q.level})
                   </p>
-                  <p className="mt-1 text-xs text-slate-600">{q.description}</p>
+                  <p className="mt-1 text-xs text-slate-300">{q.description}</p>
                 </div>
-                <span className="text-xs text-slate-500">id: {q.id}</span>
+                <span className="text-xs text-slate-400">id: {q.id}</span>
               </div>
             ))}
           </div>

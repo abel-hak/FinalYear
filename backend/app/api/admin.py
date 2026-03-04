@@ -44,6 +44,16 @@ async def create_quest_admin(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new quest."""
+    # Enforce unique order_rank at the application level so we can return a clear 400
+    existing = await db.execute(
+        select(Quest).where(Quest.order_rank == payload.order_rank, Quest.is_deleted.is_(False))
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Order {payload.order_rank} is already used by another quest. Choose a different order.",
+        )
+
     quest = Quest(
         title=payload.title,
         description=payload.description,

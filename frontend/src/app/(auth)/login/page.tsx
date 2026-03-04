@@ -63,23 +63,23 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <h1 className="text-2xl font-bold text-slate-800">Log in</h1>
+    <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-slate-950 text-slate-50">
+      <h1 className="text-2xl font-bold text-emerald-300">Log in</h1>
       <form onSubmit={handleSubmit} className="mt-6 w-full max-w-sm space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700">Username</label>
+          <label className="block text-sm font-medium text-slate-200">Username</label>
           <input
-            className="mt-1 w-full rounded border px-3 py-2 text-sm"
+            className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 placeholder:text-slate-500"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-700">Password</label>
+          <label className="block text-sm font-medium text-slate-200">Password</label>
           <input
             type="password"
-            className="mt-1 w-full rounded border px-3 py-2 text-sm"
+            className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 placeholder:text-slate-500"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -94,13 +94,13 @@ export default function LoginPage() {
           {loading ? "Logging in..." : "Log in"}
         </button>
       </form>
-      <p className="mt-4 text-sm text-slate-600">
+      <p className="mt-4 text-sm text-slate-300">
         Don&apos;t have an account?{" "}
-        <Link href="/register" className="underline hover:text-slate-800">
+        <Link href="/register" className="underline text-emerald-300 hover:text-emerald-200">
           Register
         </Link>
       </p>
-      <Link href="/" className="mt-4 text-sm text-slate-500 underline hover:text-slate-700">
+      <Link href="/" className="mt-4 text-sm text-slate-400 underline hover:text-slate-200">
         Back to home
       </Link>
     </main>
