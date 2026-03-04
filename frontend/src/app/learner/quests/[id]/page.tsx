@@ -153,7 +153,11 @@ export default function LearnerQuestPage() {
           <section className="space-y-2 rounded border bg-slate-50 p-4 text-sm">
             <p>
               Result:{" "}
-              <span className={result.passed ? "font-semibold text-emerald-700" : "font-semibold text-red-700"}>
+              <span
+                className={
+                  result.passed ? "font-semibold text-emerald-700" : "font-semibold text-red-700"
+                }
+              >
                 {result.passed ? "Passed" : "Failed"}
               </span>{" "}
               ({result.tests_passed}/{result.tests_total} tests)
@@ -180,7 +184,10 @@ export default function LearnerQuestPage() {
           </section>
         )}
 
-        <Link href="/learner/dashboard" className="text-sm text-slate-600 underline hover:text-slate-800">
+        <Link
+          href="/learner/dashboard"
+          className="text-sm text-slate-600 underline hover:text-slate-800"
+        >
           Back to dashboard
         </Link>
       </div>

@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { fetchJson } from "@/lib/api";
+import { fetchJson, getApiUrl } from "@/lib/api";
 import { setAuth, UserRole } from "@/lib/auth";
 
 interface LoginResponse {
@@ -30,7 +30,7 @@ export default function LoginPage() {
       form.set("username", username);
       form.set("password", password);
 
-      const res = await fetch("/api/v1/auth/login", {
+      const res = await fetch(getApiUrl("/api/v1/auth/login"), {
         method: "POST",
         body: form,
         headers: {

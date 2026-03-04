@@ -18,7 +18,12 @@ from app.models.user import User
 from app.models.learner import Learner
 from app.models.admin import Admin
 from app.schemas.auth import UserCreate, UserPublic, Token
-from app.core.security import hash_password, verify_password, create_access_token
+from app.core.security import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    get_current_user,
+)
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -85,4 +90,11 @@ async def login(
     access_token_expires = timedelta(minutes=minutes)
     access_token = create_access_token(subject=str(user.id), expires_delta=access_token_expires)
     return Token(access_token=access_token)
+
+
+@router.get("/me", response_model=UserPublic)
+async def read_current_user(current_user: User = Depends(get_current_user)) -> UserPublic:
+    """Return the currently authenticated user's public profile."""
+    return current_user
+
 
