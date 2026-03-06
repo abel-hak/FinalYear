@@ -69,6 +69,12 @@ export function clearAuth(): void {
   localStorage.removeItem(ROLE_KEY);
 }
 
+export function getRole(): "learner" | "admin" | null {
+  if (typeof window === "undefined") return null;
+  const value = localStorage.getItem(ROLE_KEY);
+  return value === "learner" || value === "admin" ? value : null;
+}
+
 export async function login(username: string, password: string): Promise<void> {
   const form = new URLSearchParams();
   form.set("username", username);
@@ -124,6 +130,10 @@ export async function fetchProgress(): Promise<ProgressSummaryDto> {
     },
   });
   if (!res.ok) {
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
     throw new Error(`Failed to load progress: ${res.status}`);
   }
   return (await res.json()) as ProgressSummaryDto;
@@ -140,6 +150,10 @@ export async function fetchQuestDetail(questId: string): Promise<QuestDetailDto>
     },
   });
   if (!res.ok) {
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
     throw new Error(`Failed to load quest: ${res.status}`);
   }
   return (await res.json()) as QuestDetailDto;
@@ -163,6 +177,10 @@ export async function submitQuestSolution(
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
     throw new Error(body.detail || `Submission failed (${res.status})`);
   }
   return (await res.json()) as SubmissionResultDto;

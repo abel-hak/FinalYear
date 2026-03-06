@@ -1,11 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Code2, Map, Trophy, User, Sparkles, Menu, X, HelpCircle, Shield } from 'lucide-react';
 import ProgressBar from './ProgressBar';
-import { fetchProgress, getToken } from '@/api/backend';
+import { fetchProgress, getToken, getRole, clearAuth } from '@/api/backend';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 
 const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -13,6 +21,8 @@ const Header: React.FC = () => {
   const [userLevel, setUserLevel] = useState(0);
   const [xpToNextLevel, setXpToNextLevel] = useState(100);
   const location = useLocation();
+  const navigate = useNavigate();
+  const [role, setRole] = useState<"learner" | "admin" | null>(null);
 
   useEffect(() => {
     const token = getToken();
@@ -20,6 +30,7 @@ const Header: React.FC = () => {
       setUserXP(0);
       setUserLevel(0);
       setXpToNextLevel(100);
+      setRole(null);
       return;
     }
     let cancelled = false;
@@ -31,11 +42,13 @@ const Header: React.FC = () => {
         setUserLevel(progress.current_level);
         // Simple next-level curve: 100 XP per level
         setXpToNextLevel(progress.current_level * 100 || 100);
+        setRole(getRole());
       } catch {
         if (!cancelled) {
           setUserXP(0);
           setUserLevel(0);
           setXpToNextLevel(100);
+          setRole(null);
         }
       }
     }
@@ -86,7 +99,7 @@ const Header: React.FC = () => {
           })}
         </nav>
         
-        {/* User Stats */}
+        {/* User Stats + Profile */}
         <div className="hidden md:flex items-center gap-4">
           {/* XP Progress */}
           <div className="flex items-center gap-3">
@@ -101,11 +114,29 @@ const Header: React.FC = () => {
               Lv. {userLevel}
             </Badge>
           </div>
-          
-          {/* User Avatar */}
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <User className="w-5 h-5" />
-          </Button>
+
+          {/* User Avatar / Profile menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <User className="w-5 h-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>
+                {role ? `Signed in as ${role}` : "Not signed in"}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => {
+                  clearAuth();
+                  navigate("/login");
+                }}
+              >
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         
         {/* Mobile Menu Toggle */}

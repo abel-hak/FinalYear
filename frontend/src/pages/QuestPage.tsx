@@ -82,6 +82,8 @@ const QuestPage: React.FC = () => {
   const [title, setTitle] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [initialCode, setInitialCode] = useState<string>('');
+  const [backendExplanation, setBackendExplanation] = useState<string | null>(null);
+  const [backendExplanationUnlocked, setBackendExplanationUnlocked] = useState(false);
   const meta = id ? localQuestMeta[id] : undefined;
 
   const [code, setCode] = useState('');
@@ -105,6 +107,8 @@ const QuestPage: React.FC = () => {
         setDescription(quest.description);
         setInitialCode(quest.initial_code);
         setCode(quest.initial_code);
+        setBackendExplanation(quest.explanation ?? null);
+        setBackendExplanationUnlocked(quest.explanation_unlocked);
         setLoadError(null);
       } catch (e: any) {
         if (!cancelled) {
@@ -314,7 +318,7 @@ const QuestPage: React.FC = () => {
                   output={output}
                 />
                 
-                {!showConcept && (
+                {(meta || backendExplanation) && !showConcept && (
                   <Button 
                     variant="gold" 
                     className="w-full"
@@ -325,21 +329,28 @@ const QuestPage: React.FC = () => {
                   </Button>
                 )}
                 
-                {showConcept && meta && (
+                {showConcept && (meta || backendExplanation) && (
                   <KnowledgeScroll
-                    concept="Variable Declaration"
-                    title={meta.conceptExplanation.title}
-                    description={meta.conceptExplanation.content}
-                    difficulty="beginner"
+                    concept={meta ? meta.category : "Quest concept"}
+                    title={meta ? meta.conceptExplanation.title : "How this solution works"}
+                    description={
+                      meta
+                        ? meta.conceptExplanation.content
+                        : backendExplanation || "Here is an overview of what this code is supposed to do and why the correct solution works."
+                    }
+                    difficulty={meta ? meta.difficulty : "beginner"}
                     sections={[
                       {
                         title: "Understanding the Concept",
-                        content: meta.conceptExplanation.content,
+                        content:
+                          meta
+                            ? meta.conceptExplanation.content
+                            : backendExplanation || "Review the problem description and compare it with your fixed code.",
                         codeExamples: [
                           {
-                            title: "Correct Order",
-                            code: "price = 100\ntotal_price = price * 1.1",
-                            explanation: "Define variables before using them"
+                            title: "Example solution",
+                            code: initialCode,
+                            explanation: "One possible starting point or solution for this quest."
                           }
                         ]
                       }
@@ -350,27 +361,29 @@ const QuestPage: React.FC = () => {
               </div>
             )}
             
-            {feedback === 'error' && meta && (
-              <>
+            {feedback === 'error' && (
+              <div className="space-y-4">
                 <FeedbackPanel
                   type="error"
                   title="Not Quite Right"
-                  message="The code still has issues. Check the error and try again!"
+                  message="The code still has issues. Check the output below and try again."
                   output={output}
                 />
-                <ErrorExplanation
-                  errorType="Error"
-                  errorMessage={meta.errorMessage}
-                  lineNumber={meta.errorLine}
-                  explanation="This error occurs when your code does not match the expected behavior yet."
-                  commonCauses={[
-                    "Logic bug in the code",
-                    "Variables defined in the wrong order",
-                    "Loop condition never becomes false"
-                  ]}
-                  suggestedFix="Review the hints and adjust the code accordingly."
-                />
-              </>
+                {meta && (
+                  <ErrorExplanation
+                    errorType="Error"
+                    errorMessage={meta.errorMessage}
+                    lineNumber={meta.errorLine}
+                    explanation="This error occurs when your code does not match the expected behavior yet."
+                    commonCauses={[
+                      "Logic bug in the code",
+                      "Variables defined in the wrong order",
+                      "Loop condition never becomes false"
+                    ]}
+                    suggestedFix="Review the hints and adjust the code accordingly."
+                  />
+                )}
+              </div>
             )}
           </div>
           
