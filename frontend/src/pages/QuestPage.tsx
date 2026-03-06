@@ -19,7 +19,7 @@ import Mascot from '@/components/Mascot';
 import KnowledgeScroll from '@/components/KnowledgeScroll';
 import ErrorExplanation from '@/components/ErrorExplanation';
 import TimeoutNotification from '@/components/TimeoutNotification';
-import { fetchQuestDetail, submitQuestSolution } from '@/api/backend';
+import { fetchQuestDetail, submitQuestSolution, requestAiHint } from '@/api/backend';
 
 // Static hint/concept metadata keyed by backend quest id (or fallback)
 const localQuestMeta: Record<
@@ -94,6 +94,9 @@ const QuestPage: React.FC = () => {
   const [mascotMessage, setMascotMessage] = useState<string>("");
   const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutes
   const [isTimerRunning, setIsTimerRunning] = useState(true);
+  const [aiHint, setAiHint] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -195,6 +198,8 @@ const QuestPage: React.FC = () => {
     setCode(initialCode);
     setFeedback('none');
     setOutput('');
+    setAiHint(null);
+    setAiError(null);
     setShowConcept(false);
     setMascotMood('idle');
     setMascotMessage("Fresh start! You've got this!");
@@ -208,6 +213,24 @@ const QuestPage: React.FC = () => {
     setIsTimerRunning(true);
     setMascotMood('encouraging');
     setMascotMessage("Extra time granted! Let's do this!");
+  };
+
+  const handleAskAiHint = async () => {
+    if (!id) return;
+    try {
+      setAiLoading(true);
+      setAiError(null);
+      const resp = await requestAiHint({
+        questId: id,
+        code,
+        lastOutput: output || null,
+      });
+      setAiHint(resp.hint);
+    } catch (e: any) {
+      setAiError(e.message ?? "AI hint failed");
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   return (
@@ -389,8 +412,16 @@ const QuestPage: React.FC = () => {
           
           {/* Sidebar - Hints */}
           <div className="lg:col-span-1">
-            <div className="sticky top-24 p-6 rounded-xl bg-card border border-border">
-              <HintPanel hints={meta?.hints ?? []} />
+            <div className="sticky top-24 p-6 rounded-xl bg-card border border-border space-y-2">
+              {aiError && (
+                <p className="text-xs text-red-400">{aiError}</p>
+              )}
+              <HintPanel
+                hints={meta?.hints ?? []}
+                aiHint={aiHint}
+                aiLoading={aiLoading}
+                onAskAiHint={handleAskAiHint}
+              />
             </div>
           </div>
         </div>

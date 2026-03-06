@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { register } from "@/api/backend";
@@ -29,9 +28,8 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container py-10 max-w-md">
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <main className="w-full max-w-md px-4 py-10">
         <h1 className="text-2xl font-bold mb-4 text-foreground">Register</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Lightbulb, ChevronRight, Eye, EyeOff } from 'lucide-react';
+import { Lightbulb, ChevronRight, Eye, EyeOff, Sparkles } from 'lucide-react';
 
 interface Hint {
   id: number;
@@ -11,10 +11,13 @@ interface Hint {
 
 interface HintPanelProps {
   hints: string[];
+  aiHint?: string | null;
+  aiLoading?: boolean;
+  onAskAiHint?: () => void;
   className?: string;
 }
 
-const HintPanel: React.FC<HintPanelProps> = ({ hints, className }) => {
+const HintPanel: React.FC<HintPanelProps> = ({ hints, aiHint, aiLoading, onAskAiHint, className }) => {
   const [revealedHints, setRevealedHints] = useState<number[]>([]);
   
   const revealNextHint = () => {
@@ -72,6 +75,31 @@ const HintPanel: React.FC<HintPanelProps> = ({ hints, className }) => {
             <EyeOff className="w-4 h-4 inline mr-1" />
             All hints revealed
           </p>
+        </div>
+      )}
+
+      {/* AI hint */}
+      {onAskAiHint && (
+        <div className="pt-2 border-t border-border/60 space-y-2">
+          {aiHint && (
+            <div className="hint-card bg-primary/5 border border-primary/40 p-3 rounded-md text-sm text-foreground">
+              <div className="flex items-center gap-2 mb-1 text-primary-foreground">
+                <Sparkles className="w-4 h-4" />
+                <span className="font-semibold text-xs uppercase tracking-wide">AI hint</span>
+              </div>
+              <p className="text-sm text-foreground">{aiHint}</p>
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={aiLoading}
+            onClick={onAskAiHint}
+            className="w-full justify-center text-xs text-muted-foreground hover:text-primary"
+          >
+            <Sparkles className="w-3 h-3 mr-1" />
+            {aiLoading ? "Asking AI..." : "Ask AI for a hint"}
+          </Button>
         </div>
       )}
     </div>

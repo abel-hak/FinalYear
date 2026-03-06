@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     debug: bool = True
     api_prefix: str = "/api/v1"
 
+    # AI hint service (OpenAI-compatible)
+    ai_api_base: str | None = None  # e.g. "https://api.openai.com/v1"
+    ai_api_key: str | None = None
+    ai_model: str = "gpt-4o-mini"
+
 
 @lru_cache
 def get_settings() -> Settings:

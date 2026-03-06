@@ -52,6 +52,10 @@ export interface AdminQuestDto {
   is_deleted: boolean;
 }
 
+export interface AiHintResponseDto {
+  hint: string;
+}
+
 export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(TOKEN_KEY);
@@ -226,6 +230,34 @@ export async function createAdminQuest(payload: {
     throw new Error(body.detail || `Failed to create quest (${res.status})`);
   }
   return (await res.json()) as AdminQuestDto;
+}
+
+export async function requestAiHint(params: {
+  questId: string;
+  code: string;
+  lastOutput?: string;
+}): Promise<AiHintResponseDto> {
+  const token = getToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+  const res = await fetch(`${API_BASE}/api/v1/hints/ai`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      quest_id: params.questId,
+      code: params.code,
+      last_output: params.lastOutput ?? null,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({} as any));
+    throw new Error(body.detail || `AI hint failed (${res.status})`);
+  }
+  return (await res.json()) as AiHintResponseDto;
 }
 
 
