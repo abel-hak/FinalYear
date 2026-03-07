@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { login } from "@/api/backend";
+import { login, getRole } from "@/api/backend";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -17,7 +17,8 @@ const Login = () => {
     setLoading(true);
     try {
       await login(username, password);
-      navigate("/quests");
+      const role = getRole();
+      navigate(role === "admin" ? "/admin" : "/quests");
     } catch (e: any) {
       setError(e.message ?? "Login failed");
     } finally {

@@ -2,28 +2,203 @@
 Admin APIs for managing quests and test cases.
 Requires admin role (RBAC enforced via get_current_admin).
 """
+from datetime import datetime, timedelta, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.db.session import get_db
 from app.core.security import get_current_admin
 from app.models.user import User
+from app.models.learner import Learner
 from app.models.quest import Quest
 from app.models.test_case import TestCase
+from app.models.submission import Submission
 from app.schemas.admin import (
     QuestCreate,
     QuestUpdate,
     QuestAdmin,
     TestCaseCreate,
     TestCaseAdmin,
+    AdminStats,
+    AdminUserProgress,
+    AdminAnalytics,
+    AdminQuestCompletion,
+    AdminDifficultyDistribution,
+    AdminDailyActivity,
 )
 from pydantic import UUID4
 
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.get("/stats", response_model=AdminStats)
+async def get_admin_stats(
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Dashboard stats: total users, quests completed, completion rate."""
+    # Total learners
+    learners_count = await db.execute(
+        select(func.count(Learner.id)).where(Learner.is_deleted.is_(False))
+    )
+    total_users = learners_count.scalar() or 0
+
+    # Total quests (non-deleted)
+    quests_count = await db.execute(
+        select(func.count(Quest.id)).where(Quest.is_deleted.is_(False))
+    )
+    total_quests = quests_count.scalar() or 0
+
+    # Distinct (learner_id, quest_id) where passed
+    subq = (
+        select(Submission.learner_id, Submission.quest_id)
+        .where(Submission.passed.is_(True))
+        .distinct()
+    )
+    completed_count = await db.execute(select(func.count()).select_from(subq.subquery()))
+    quests_completed = completed_count.scalar() or 0
+
+    # Completion rate: completed / (learners * quests) or 0
+    possible = total_users * total_quests if total_quests else 0
+    completion_rate_pct = (quests_completed / possible * 100) if possible else 0.0
+
+    return AdminStats(
+        total_users=total_users,
+        quests_completed=quests_completed,
+        total_quests=total_quests,
+        completion_rate_pct=round(completion_rate_pct, 1),
+    )
+
+
+@router.get("/users", response_model=List[AdminUserProgress])
+async def list_admin_users(
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """List learners with progress for admin user table."""
+    total_quests_result = await db.execute(
+        select(func.count(Quest.id)).where(Quest.is_deleted.is_(False))
+    )
+    total_quests = total_quests_result.scalar() or 0
+
+    learners = await db.execute(
+        select(User, Learner)
+        .join(Learner, Learner.user_id == User.id)
+        .where(User.role == "learner", User.is_deleted.is_(False), Learner.is_deleted.is_(False))
+    )
+    rows = learners.all()
+
+    result = []
+    for user, learner in rows:
+        completed_q = await db.execute(
+            select(func.count(Submission.quest_id.distinct()))
+            .where(Submission.learner_id == learner.id, Submission.passed.is_(True))
+        )
+        quests_completed = completed_q.scalar() or 0
+
+        last_sub = await db.execute(
+            select(func.max(Submission.created_at)).where(Submission.learner_id == learner.id)
+        )
+        last_active = last_sub.scalar()
+
+        result.append(
+            AdminUserProgress(
+                id=str(user.id),
+                username=user.username,
+                email=user.email,
+                quests_completed=quests_completed,
+                total_quests=total_quests,
+                xp_earned=learner.total_points,
+                last_active=last_active,
+            )
+        )
+    return result
+
+
+@router.get("/analytics", response_model=AdminAnalytics)
+async def get_admin_analytics(
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Analytics for charts: quest completion, difficulty, weekly activity."""
+    quests = await db.execute(
+        select(Quest).where(Quest.is_deleted.is_(False)).order_by(Quest.order_rank)
+    )
+    quest_list = list(quests.scalars().all())
+
+    quest_completion = []
+    for q in quest_list:
+        passed = await db.execute(
+            select(func.count(Submission.id)).where(
+                Submission.quest_id == q.id, Submission.passed.is_(True)
+            )
+        )
+        failed = await db.execute(
+            select(func.count(Submission.id)).where(
+                Submission.quest_id == q.id, Submission.passed.is_(False)
+            )
+        )
+        quest_completion.append(
+            AdminQuestCompletion(
+                quest_id=str(q.id),
+                quest_title=q.title[:30] + ("..." if len(q.title) > 30 else ""),
+                completed=passed.scalar() or 0,
+                failed=failed.scalar() or 0,
+            )
+        )
+
+    level_counts = await db.execute(
+        select(Quest.level, func.count(Quest.id))
+        .where(Quest.is_deleted.is_(False))
+        .group_by(Quest.level)
+    )
+    level_map = {1: "Easy", 2: "Medium", 3: "Hard", 4: "Expert", 5: "Master"}
+    difficulty_distribution = [
+        AdminDifficultyDistribution(
+            level=lev,
+            label=level_map.get(lev, f"Level {lev}"),
+            count=cnt,
+        )
+        for lev, cnt in level_counts.all()
+    ]
+
+    now = datetime.now(timezone.utc)
+    weekly_activity = []
+    day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    for i in range(6, -1, -1):
+        d = now - timedelta(days=i)
+        day_start = d.replace(hour=0, minute=0, second=0, microsecond=0)
+        day_end = day_start + timedelta(days=1)
+        sub_count = await db.execute(
+            select(func.count(Submission.id)).where(
+                Submission.created_at >= day_start,
+                Submission.created_at < day_end,
+            )
+        )
+        user_count = await db.execute(
+            select(func.count(Submission.learner_id.distinct())).where(
+                Submission.created_at >= day_start,
+                Submission.created_at < day_end,
+            )
+        )
+        weekly_activity.append(
+            AdminDailyActivity(
+                day=day_names[d.weekday()],
+                date=d.strftime("%Y-%m-%d"),
+                submissions=sub_count.scalar() or 0,
+                unique_users=user_count.scalar() or 0,
+            )
+        )
+
+    return AdminAnalytics(
+        quest_completion=quest_completion,
+        difficulty_distribution=difficulty_distribution,
+        weekly_activity=weekly_activity,
+    )
 
 
 @router.get("/quests", response_model=List[QuestAdmin])

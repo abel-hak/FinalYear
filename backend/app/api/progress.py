@@ -31,11 +31,16 @@ async def get_progress(
     db: AsyncSession = Depends(get_db),
 ):
     """Return learner's level, points, and quest statuses."""
-    # Resolve learner
+    # Resolve learner (admins also have a Learner record)
     learner_row = await db.execute(
         select(Learner).where(Learner.user_id == current_user.id, Learner.is_deleted.is_(False))
     )
-    learner = learner_row.scalar_one()
+    learner = learner_row.scalar_one_or_none()
+    if not learner:
+        # Admin without Learner record (e.g. created before we added dual-role) - create one
+        learner = Learner(user_id=current_user.id)
+        db.add(learner)
+        await db.flush()
 
     # All quests
     result = await db.execute(

@@ -8,10 +8,10 @@ Per documentation:
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Optional
 
+import bcrypt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -20,26 +20,23 @@ from app.db.session import get_db
 from app.models.user import User
 
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a bcrypt hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(
+        plain_password.encode("utf-8"),
+        hashed_password.encode("utf-8") if isinstance(hashed_password, str) else hashed_password,
+    )
 
 
 def hash_password(password: str) -> str:
     """Create a bcrypt hash for the given password."""
-    # bcrypt limit is 72 bytes; truncate longer secrets defensively
-    if isinstance(password, str):
-        password_bytes = password.encode("utf-8")
-    else:
-        password_bytes = password
+    password_bytes = password.encode("utf-8")
     if len(password_bytes) > 72:
         password_bytes = password_bytes[:72]
-        password = password_bytes.decode("utf-8", errors="ignore")
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode("utf-8")
 
 
 def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
@@ -89,8 +86,8 @@ async def get_current_user(
 async def get_current_learner(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> User:
-    """Ensure current user has learner role."""
-    if current_user.role != "learner":
+    """Ensure current user can access learner features (learners and admins)."""
+    if current_user.role not in ("learner", "admin"):
         raise HTTPException(status_code=403, detail="Learner access required")
     return current_user
 

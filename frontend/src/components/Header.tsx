@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Code2, Map, Trophy, User, Sparkles, Menu, X, HelpCircle, Shield } from 'lucide-react';
+import { Code2, Map, Trophy, User, Sparkles, Menu, X, HelpCircle, Shield, LayoutDashboard } from 'lucide-react';
 import ProgressBar from './ProgressBar';
 import { fetchProgress, getToken, getRole, clearAuth } from '@/api/backend';
 import {
@@ -33,6 +33,7 @@ const Header: React.FC = () => {
       setRole(null);
       return;
     }
+    setRole(getRole());
     let cancelled = false;
     async function load() {
       try {
@@ -40,15 +41,12 @@ const Header: React.FC = () => {
         if (cancelled) return;
         setUserXP(progress.total_points);
         setUserLevel(progress.current_level);
-        // Simple next-level curve: 100 XP per level
         setXpToNextLevel(progress.current_level * 100 || 100);
-        setRole(getRole());
       } catch {
         if (!cancelled) {
           setUserXP(0);
           setUserLevel(0);
           setXpToNextLevel(100);
-          setRole(null);
         }
       }
     }
@@ -60,6 +58,7 @@ const Header: React.FC = () => {
 
   const navLinks = [
     { to: '/', label: 'Home', icon: Code2 },
+    ...(role === 'admin' ? [{ to: '/admin', label: 'Admin', icon: LayoutDashboard }] : []),
     { to: '/quests', label: 'Quests', icon: Map },
     { to: '/achievements', label: 'Achievements', icon: Trophy },
     { to: '/faq', label: 'Help', icon: HelpCircle },

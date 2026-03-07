@@ -59,6 +59,9 @@ async def register_user(
     else:
         admin = Admin(user_id=user.id, admin_status="active")
         db.add(admin)
+        # Admins also get a Learner record so they can try quests and test the platform
+        learner = Learner(user_id=user.id)
+        db.add(learner)
 
     await db.commit()
     await db.refresh(user)
