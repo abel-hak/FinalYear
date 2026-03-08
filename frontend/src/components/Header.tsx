@@ -15,6 +15,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "@/contexts/ThemeContext";
+import NotificationCenter from "./NotificationCenter";
 
 const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
@@ -127,6 +128,9 @@ const Header: React.FC = () => {
             )}
           </div>
 
+          {/* Notification center */}
+          <NotificationCenter />
+
           {/* Theme toggle */}
           <Button variant="ghost" size="icon" onClick={toggleTheme} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
             {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -191,6 +195,11 @@ const Header: React.FC = () => {
               );
             })}
             
+            {/* Mobile: Notification center */}
+            <div className="pt-2">
+              <NotificationCenter />
+            </div>
+
             {/* Mobile: Theme toggle */}
             <div className="pt-2">
               <Button variant="outline" size="sm" onClick={toggleTheme} className="w-full justify-start gap-2">
