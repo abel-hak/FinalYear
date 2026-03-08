@@ -35,6 +35,7 @@ const LearningPathDetail: React.FC = () => {
   }, [id]);
 
   const completedCount = path?.quests.filter((q) => q.status === 'completed').length ?? 0;
+  const isLocked = path && path.is_unlocked === false;
 
   return (
     <div className="min-h-screen bg-background">
@@ -52,6 +53,11 @@ const LearningPathDetail: React.FC = () => {
               <Link to="/learning-paths" className="text-sm text-muted-foreground hover:text-primary mb-4 inline-block">
                 ← Back to paths
               </Link>
+              {isLocked && path.unlock_hint && (
+                <div className="mb-4 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
+                  <strong>Locked:</strong> {path.unlock_hint}
+                </div>
+              )}
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                   <BookOpen className="w-6 h-6 text-primary" />
@@ -77,7 +83,7 @@ const LearningPathDetail: React.FC = () => {
 
             <div className="space-y-3">
               {path.quests.map((quest, idx) => (
-                <QuestStep key={quest.id} quest={quest} index={idx + 1} />
+                <QuestStep key={quest.id} quest={quest} index={idx + 1} pathLocked={isLocked} />
               ))}
             </div>
           </>
@@ -87,8 +93,12 @@ const LearningPathDetail: React.FC = () => {
   );
 };
 
-const QuestStep: React.FC<{ quest: LearningPathQuestItemDto; index: number }> = ({ quest, index }) => {
-  const canAccess = quest.status !== 'locked';
+const QuestStep: React.FC<{
+  quest: LearningPathQuestItemDto;
+  index: number;
+  pathLocked?: boolean;
+}> = ({ quest, index, pathLocked }) => {
+  const canAccess = quest.status !== 'locked' && !pathLocked;
   const isCompleted = quest.status === 'completed';
 
   return (

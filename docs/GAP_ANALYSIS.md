@@ -33,13 +33,11 @@ This document compares the implemented system against the requirements in **Fina
 
 ## ❌ Missing or Incomplete (must implement per document)
 
-### 1. **NFR-01.4 – Rate limiting: 5 code submissions per minute**
+### 1. **NFR-01.4 – Rate limiting: 5 code submissions per minute** ✅
 
 **Document:** *"Learner account limited to five code submissions per minute."*
 
-**Status:** Not implemented. The submit endpoint has no rate limit.
-
-**Action:** Add rate limiting middleware or per-user submission counter (e.g. 5/minute per learner).
+**Status:** Implemented. `submission_rate_limit_per_minute` (default 5) in config. Per-learner in-memory rate limiter on `POST /quests/{id}/submit`. Returns 429 when exceeded.
 
 ---
 
@@ -59,13 +57,11 @@ This document compares the implemented system against the requirements in **Fina
 
 ---
 
-### 4. **NFR-10.3 – Rate limiting on Code Submission API**
+### 4. **NFR-10.3 – Rate limiting on Code Submission API** ✅
 
 **Document:** *"Rate-limiting on Code Submission API to prevent DoS attacks."*
 
-**Status:** Same as NFR-01.4 – not implemented.
-
-**Action:** Implement rate limiting on `POST /quests/{id}/submit` (e.g. 5 req/min per user).
+**Status:** Implemented. Same as NFR-01.4. Additional rate limits: login (5/min), AI hints (10/min).
 
 ---
 
@@ -105,20 +101,26 @@ This document compares the implemented system against the requirements in **Fina
 
 ---
 
-## Summary – Priority order for implementation
+## Summary – All document requirements implemented
 
-| Priority | Item | Effort |
-|----------|------|--------|
-| **P0** | NFR-01.4 & NFR-10.3: Rate limit 5 submissions/minute | Medium |
-| **P0** | NFR-01.3: "System Busy" for system errors | Low |
-| **P1** | US-014: Admin remove learners | Medium |
-| **P2** | NFR-11.2: Purge submissions after 30 days | Low–Medium |
-| **P3** | US-013: Daily activity notifications | Medium–High |
+All requirements from the Final Year Project document are now implemented.
 
 ---
 
-## Documentation updates recommended
+## Beyond-document features implemented
 
-1. **SCHEMA.md** – Add `hint_requests`, `streak_days`, `last_activity_date` on Learner.
-2. **TESTING.md** – Add new tests (hints, quest submit, sandbox).
+- **Learning paths** – Level-by-level curated sequences; Level N unlocks when Level N-1 complete.
+- **Admin path management** – Create/edit/delete paths; assign quests to paths.
+- **Concept tags** – Filter quests by tags (variables, loops, etc.).
+- **Spaced repetition** – Suggest revisiting quests completed 7+ days ago.
+- **Time-based leaderboards** – Weekly/monthly rankings.
+- **Dark/light theme** – User preference.
+- **Notification center** – Achievements, streaks, system messages.
+
+---
+
+## Documentation updates
+
+1. **SCHEMA.md** – Includes hint_requests, streak_days, last_activity_date, learning_paths.
+2. **TESTING.md** – Covers hints, quest submit, sandbox, learning paths.
 3. **Report** – Note FastAPI (instead of Flask) and Python subprocess (instead of Go) with justification.

@@ -1,6 +1,6 @@
 import React from 'react';
 import Header from '@/components/Header';
-import { BookOpen, ChevronRight } from 'lucide-react';
+import { BookOpen, ChevronRight, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { fetchLearningPaths, type LearningPathSummaryDto } from '@/api/backend';
 
@@ -45,36 +45,65 @@ const LearningPaths: React.FC = () => {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-6">
-            {paths.map((path) => (
-              <Link key={path.id} to={`/learning-paths/${path.id}`}>
-                <div className="p-6 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors group">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <BookOpen className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/20 text-primary">
-                            Level {path.level}
-                          </span>
-                          <h2 className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                            {path.title}
-                          </h2>
+            {paths.map((path) => {
+              const unlocked = path.unlocked !== false;
+              return (
+                <Link key={path.id} to={unlocked ? `/learning-paths/${path.id}` : '#'}>
+                  <div
+                    className={`p-6 rounded-xl border transition-colors group ${
+                      unlocked
+                        ? 'bg-card border-border hover:border-primary/50'
+                        : 'bg-muted/30 border-border opacity-80 cursor-not-allowed'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div
+                          className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                            unlocked ? 'bg-primary/10' : 'bg-muted'
+                          }`}
+                        >
+                          {unlocked ? (
+                            <BookOpen className="w-5 h-5 text-primary" />
+                          ) : (
+                            <Lock className="w-5 h-5 text-muted-foreground" />
+                          )}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {path.quest_count} quests
-                        </p>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/20 text-primary">
+                              Level {path.level}
+                            </span>
+                            {!unlocked && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600">
+                                Locked
+                              </span>
+                            )}
+                            <h2 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                              {path.title}
+                            </h2>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {path.quest_count} quests
+                          </p>
+                        </div>
                       </div>
+                      {unlocked && (
+                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      )}
                     </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {path.description}
+                    </p>
+                    {!unlocked && (
+                      <p className="text-xs text-amber-600 mt-2">
+                        Complete Level {path.level - 1} to unlock
+                      </p>
+                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {path.description}
-                  </p>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </main>

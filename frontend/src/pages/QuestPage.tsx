@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import CodeEditor from '@/components/CodeEditor';
 import HintPanel from '@/components/HintPanel';
@@ -10,6 +10,7 @@ import {
   Play, 
   RotateCcw, 
   ChevronLeft, 
+  ChevronRight,
   Sparkles, 
   BookOpen,
   CheckCircle2,
@@ -77,6 +78,7 @@ type MascotMood = 'idle' | 'thinking' | 'celebrating' | 'sad' | 'encouraging' | 
 
 const QuestPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [title, setTitle] = useState<string>('');
@@ -84,6 +86,8 @@ const QuestPage: React.FC = () => {
   const [initialCode, setInitialCode] = useState<string>('');
   const [backendExplanation, setBackendExplanation] = useState<string | null>(null);
   const [backendExplanationUnlocked, setBackendExplanationUnlocked] = useState(false);
+  const [prevQuestId, setPrevQuestId] = useState<string | null>(null);
+  const [nextQuestId, setNextQuestId] = useState<string | null>(null);
   const meta = id ? localQuestMeta[id] : undefined;
 
   const [code, setCode] = useState('');
@@ -115,7 +119,12 @@ const QuestPage: React.FC = () => {
         setCode(quest.initial_code);
         setBackendExplanation(quest.explanation ?? null);
         setBackendExplanationUnlocked(quest.explanation_unlocked);
+        setPrevQuestId(quest.prev_id ?? null);
+        setNextQuestId(quest.next_id ?? null);
         setLoadError(null);
+        setFeedback('none');
+        setOutput('');
+        setShowConcept(false);
         const { remaining } = await fetchHintRemaining(id);
         if (!cancelled) setAiHintsRemaining(remaining);
       } catch (e: any) {
@@ -286,11 +295,37 @@ const QuestPage: React.FC = () => {
           </div>
           
           <main className="container py-6">
-        {/* Back button */}
-        <Link to="/quests" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
-          <ChevronLeft className="w-4 h-4" />
-          Back to Quests
-        </Link>
+        {/* Back button and quest navigation */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <Link to="/quests" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ChevronLeft className="w-4 h-4" />
+            Back to Quests
+          </Link>
+          {(prevQuestId || nextQuestId) && (
+            <div className="flex items-center gap-2">
+              {prevQuestId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate(`/quest/${prevQuestId}`)}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </Button>
+              )}
+              {nextQuestId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate(`/quest/${nextQuestId}`)}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
         
         {/* Quest Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -359,6 +394,31 @@ const QuestPage: React.FC = () => {
                   message="Excellent work! You've successfully fixed the bug."
                   output={output}
                 />
+                
+                {(prevQuestId || nextQuestId) && (
+                  <div className="flex items-center gap-3">
+                    {prevQuestId && (
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate(`/quest/${prevQuestId}`)}
+                        className="flex-1"
+                      >
+                        <ChevronLeft className="w-4 h-4 mr-2" />
+                        Previous Quest
+                      </Button>
+                    )}
+                    {nextQuestId && (
+                      <Button
+                        variant="hero"
+                        onClick={() => navigate(`/quest/${nextQuestId}`)}
+                        className="flex-1"
+                      >
+                        Next Quest
+                        <ChevronRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    )}
+                  </div>
+                )}
                 
                 {(meta || backendExplanation) && !showConcept && (
                   <Button 

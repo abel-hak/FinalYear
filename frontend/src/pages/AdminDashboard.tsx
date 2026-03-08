@@ -8,12 +8,14 @@ import {
   FileText, 
   Trophy,
   Target,
-  Loader2
+  Loader2,
+  BookOpen
 } from "lucide-react";
 import Header from "@/components/Header";
 import { UserProgressTable } from "@/components/admin/UserProgressTable";
 import { QuestAnalytics } from "@/components/admin/QuestAnalytics";
 import { ContentManagement } from "@/components/admin/ContentManagement";
+import { PathManagement } from "@/components/admin/PathManagement";
 import { fetchAdminStats, type AdminStatsDto } from "@/api/backend";
 
 const AdminDashboard = () => {
@@ -89,18 +91,22 @@ const AdminDashboard = () => {
 
           {/* Main Content Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsList className="grid w-full max-w-2xl grid-cols-4">
               <TabsTrigger value="users" className="gap-2">
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Users</span>
               </TabsTrigger>
+              <TabsTrigger value="content" className="gap-2">
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline">Quests</span>
+              </TabsTrigger>
+              <TabsTrigger value="paths" className="gap-2">
+                <BookOpen className="w-4 h-4" />
+                <span className="hidden sm:inline">Paths</span>
+              </TabsTrigger>
               <TabsTrigger value="analytics" className="gap-2">
                 <BarChart3 className="w-4 h-4" />
                 <span className="hidden sm:inline">Analytics</span>
-              </TabsTrigger>
-              <TabsTrigger value="content" className="gap-2">
-                <FileText className="w-4 h-4" />
-                <span className="hidden sm:inline">Content</span>
               </TabsTrigger>
             </TabsList>
 
@@ -122,6 +128,15 @@ const AdminDashboard = () => {
                 <CardContent className="p-6">
                   <h2 className="text-xl font-semibold mb-4">Quest Management</h2>
                   <ContentManagement />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="paths" className="space-y-4">
+              <Card>
+                <CardContent className="p-6">
+                  <h2 className="text-xl font-semibold mb-4">Learning Paths</h2>
+                  <PathManagement />
                 </CardContent>
               </Card>
             </TabsContent>

@@ -30,6 +30,7 @@ export interface LearningPathSummaryDto {
   level: number;
   order_rank: number;
   quest_count: number;
+  unlocked?: boolean;
 }
 
 export interface LearningPathQuestItemDto {
@@ -49,6 +50,8 @@ export interface LearningPathDetailDto {
   level: number;
   order_rank: number;
   quests: LearningPathQuestItemDto[];
+  is_unlocked?: boolean;
+  unlock_hint?: string | null;
 }
 
 export interface ReviewSuggestionDto {
@@ -71,6 +74,8 @@ export interface QuestDetailDto {
   initial_code: string;
   explanation_unlocked: boolean;
   explanation?: string | null;
+  prev_id?: string | null;
+  next_id?: string | null;
 }
 
 export interface SubmissionResultDto {
@@ -275,7 +280,10 @@ export async function fetchProgress(): Promise<ProgressSummaryDto> {
 }
 
 export async function fetchLearningPaths(): Promise<LearningPathSummaryDto[]> {
-  const res = await fetch(`${API_BASE}/api/v1/learning-paths`);
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/api/v1/learning-paths`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
   if (!res.ok) return [];
   return (await res.json()) as LearningPathSummaryDto[];
 }
@@ -537,6 +545,120 @@ export async function deleteTestCase(testCaseId: string): Promise<void> {
       throw new Error("Unauthorized");
     }
     throw new Error(body.detail || `Failed to delete test case (${res.status})`);
+  }
+}
+
+// Learning paths admin
+export interface AdminLearningPathDto {
+  id: string;
+  title: string;
+  description: string;
+  level: number;
+  order_rank: number;
+  quest_count: number;
+}
+
+export interface AdminPathQuestDto {
+  id: string;
+  quest_id: string;
+  order_rank: number;
+  quest_title: string;
+  quest_level: number;
+}
+
+export async function fetchAdminLearningPaths(): Promise<AdminLearningPathDto[]> {
+  return adminFetch<AdminLearningPathDto[]>("/learning-paths");
+}
+
+export async function createAdminLearningPath(payload: {
+  title: string;
+  description: string;
+  level: number;
+  order_rank: number;
+}): Promise<AdminLearningPathDto> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(`${API_BASE}/api/v1/admin/learning-paths`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Failed to create path (${res.status})`);
+  }
+  return (await res.json()) as AdminLearningPathDto;
+}
+
+export async function updateAdminLearningPath(
+  pathId: string,
+  payload: Partial<{ title: string; description: string; level: number; order_rank: number }>
+): Promise<AdminLearningPathDto> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(`${API_BASE}/api/v1/admin/learning-paths/${pathId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Failed to update path (${res.status})`);
+  }
+  return (await res.json()) as AdminLearningPathDto;
+}
+
+export async function deleteAdminLearningPath(pathId: string): Promise<void> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(`${API_BASE}/api/v1/admin/learning-paths/${pathId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Failed to delete path (${res.status})`);
+  }
+}
+
+export async function fetchAdminPathQuests(pathId: string): Promise<AdminPathQuestDto[]> {
+  return adminFetch<AdminPathQuestDto[]>(`/learning-paths/${pathId}/quests`);
+}
+
+export async function addQuestToPath(pathId: string, questId: string, orderRank?: number): Promise<AdminPathQuestDto> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(`${API_BASE}/api/v1/admin/learning-paths/${pathId}/quests`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ quest_id: questId, order_rank: orderRank ?? null }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Failed to add quest (${res.status})`);
+  }
+  return (await res.json()) as AdminPathQuestDto;
+}
+
+export async function removeQuestFromPath(pathId: string, questId: string): Promise<void> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(
+    `${API_BASE}/api/v1/admin/learning-paths/${pathId}/quests/${questId}`,
+    { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Failed to remove quest (${res.status})`);
   }
 }
 

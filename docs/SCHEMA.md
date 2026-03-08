@@ -7,11 +7,12 @@ Entity summary and indexes. Matches the project documentation (User, Learner, Ad
 | Table | Purpose |
 |-------|--------|
 | **users** | Identity and auth: username, email, password_hash, role (learner/admin). |
-| **learners** | 1:1 with User; current_level, total_points. |
+| **learners** | 1:1 with User; current_level, total_points, streak_days, last_activity_date. |
 | **admins** | 1:1 with User; admin_status. |
 | **quests** | One challenge: title, description, level, order_rank, initial_code, solution_code, explanation. |
 | **test_cases** | N:1 with Quest; input_data (JSONB), expected_output, is_hidden. |
 | **submissions** | One attempt: learner_id, quest_id, code, passed, output_log, created_at. |
+| **hint_requests** | Tracks AI hint usage per (learner_id, quest_id) for limit enforcement. |
 | **learning_paths** | Curated sequence: title, description, level (1–3), order_rank. |
 | **learning_path_quests** | Junction: path_id, quest_id, order_rank. |
 
@@ -34,12 +35,16 @@ Entity summary and indexes. Matches the project documentation (User, Learner, Ad
 - `quests`: unique on order_rank (linear progression)
 - `test_cases`: index on quest_id
 - `submissions`: (learner_id, quest_id), (learner_id, created_at)
+- `hint_requests`: (learner_id, quest_id)
+- `learning_path_quests`: path_id, quest_id
 
 ## Progress semantics
 
 - A learner has **completed** a quest if there is at least one **submission** with `passed = true` for that (learner_id, quest_id).
 - **Unlock next quest**: next quest in `order_rank` is unlocked when the previous one is completed.
 - **Knowledge Scroll**: the quest’s `explanation` is shown after the first passing submission.
+
+- **Learning paths**: Level N path unlocks when all quests in Level N-1 path are completed.
 
 ## Verifying M2
 
