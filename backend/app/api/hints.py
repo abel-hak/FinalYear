@@ -7,6 +7,7 @@ Limited to 3 hints per quest per learner.
 
 import uuid
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -109,6 +110,11 @@ async def get_ai_hint(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
+        ) from exc
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI hints are temporarily unavailable. Please try again in a few moments.",
         ) from exc
 
     # Record hint request

@@ -137,6 +137,23 @@ async def get_quest(
     )
     completed = sub.scalar_one_or_none() is not None
 
+    # Prev/next quest IDs for navigation (ordered by order_rank)
+    all_quests_result = await db.execute(
+        select(Quest.id, Quest.order_rank)
+        .where(Quest.is_deleted.is_(False))
+        .order_by(Quest.order_rank)
+    )
+    ordered = list(all_quests_result.all())
+    prev_id = None
+    next_id = None
+    for i, (qid, _) in enumerate(ordered):
+        if qid == quest.id:
+            if i > 0:
+                prev_id = ordered[i - 1][0]
+            if i < len(ordered) - 1:
+                next_id = ordered[i + 1][0]
+            break
+
     return QuestDetail(
         id=quest.id,
         title=quest.title,
@@ -147,6 +164,8 @@ async def get_quest(
         explanation_unlocked=completed,
         explanation=quest.explanation if completed else None,
         tags=quest.tags if quest.tags else [],
+        prev_id=prev_id,
+        next_id=next_id,
     )
 
 

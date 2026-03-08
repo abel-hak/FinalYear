@@ -42,10 +42,13 @@ from app.models.quest import Quest
 from app.models.test_case import TestCase
 from app.models.learning_path import LearningPath, LearningPathQuest
 
-# Real password hashing so M3 login works with seeded users
+# Real password hashing so M3 login works with seeded users (use bcrypt directly, same as app)
 def _hash_password(password: str) -> str:
-    from passlib.context import CryptContext
-    return CryptContext(schemes=["bcrypt"], deprecated="auto").hash(password)
+    import bcrypt
+    pw = password.encode("utf-8")
+    if len(pw) > 72:
+        pw = pw[:72]
+    return bcrypt.hashpw(pw, bcrypt.gensalt()).decode("utf-8")
 
 engine = create_engine(database_url)
 Session = sessionmaker(bind=engine)
@@ -202,17 +205,17 @@ def seed():
             is_hidden=False,
         ))
 
-        # 8) Quest 6: Fix exception handling (Level 3)
+        # 8) Quest 6: Fix a string (Level 2)
         q6 = Quest(
             id=uuid.uuid4(),
-            title="Fix the exception",
-            description="The code should print 'OK' when dividing 10 by 2. Fix the try/except.",
-            level=3,
+            title="Fix the string",
+            description="The code should print 'hello world'. Fix the string concatenation.",
+            level=2,
             order_rank=6,
-            initial_code='try:\n    x = 10 / 0\n    print("OK")\nexcept:\n    print("Error")',
-            solution_code='try:\n    x = 10 / 2\n    print("OK")\nexcept:\n    print("Error")',
-            explanation="Use 10 / 2 so no exception is raised.",
-            tags=["exceptions", "division"],
+            initial_code='a = "hello"\nb = "world"\nprint(a + b)  # missing space',
+            solution_code='a = "hello "\nb = "world"\nprint(a + b)',
+            explanation="Add a space after 'hello' so the output is 'hello world'.",
+            tags=["strings", "concatenation"],
         )
         session.add(q6)
         session.flush()
@@ -220,11 +223,77 @@ def seed():
             id=uuid.uuid4(),
             quest_id=q6.id,
             input_data=None,
+            expected_output="hello world\n",
+            is_hidden=False,
+        ))
+
+        # 9) Quest 7: Fix a dict (Level 2)
+        q7 = Quest(
+            id=uuid.uuid4(),
+            title="Fix the dictionary",
+            description="The code should print 42. Fix the dictionary lookup.",
+            level=2,
+            order_rank=7,
+            initial_code='d = {"x": 42, "y": 10}\nprint(d["z"])  # wrong key',
+            solution_code='d = {"x": 42, "y": 10}\nprint(d["x"])',
+            explanation="Use key 'x' to get 42, not 'z'.",
+            tags=["dict", "lookup"],
+        )
+        session.add(q7)
+        session.flush()
+        session.add(TestCase(
+            id=uuid.uuid4(),
+            quest_id=q7.id,
+            input_data=None,
+            expected_output="42\n",
+            is_hidden=False,
+        ))
+
+        # 10) Quest 8: Fix exception handling (Level 3)
+        q8 = Quest(
+            id=uuid.uuid4(),
+            title="Fix the exception",
+            description="The code should print 'OK' when dividing 10 by 2. Fix the try/except.",
+            level=3,
+            order_rank=8,
+            initial_code='try:\n    x = 10 / 0\n    print("OK")\nexcept:\n    print("Error")',
+            solution_code='try:\n    x = 10 / 2\n    print("OK")\nexcept:\n    print("Error")',
+            explanation="Use 10 / 2 so no exception is raised.",
+            tags=["exceptions", "division"],
+        )
+        session.add(q8)
+        session.flush()
+        session.add(TestCase(
+            id=uuid.uuid4(),
+            quest_id=q8.id,
+            input_data=None,
             expected_output="OK\n",
             is_hidden=False,
         ))
 
-        # 9) Learning paths: Level 1, 2, 3
+        # 11) Quest 9: Fix ValueError (Level 3)
+        q9 = Quest(
+            id=uuid.uuid4(),
+            title="Fix the conversion",
+            description="The code should print 100. Fix the int() conversion.",
+            level=3,
+            order_rank=9,
+            initial_code='s = "100"\nprint(int(s) + 1)  # should be 100',
+            solution_code='s = "100"\nprint(int(s))',
+            explanation="Remove the +1 to get 100.",
+            tags=["type conversion", "int"],
+        )
+        session.add(q9)
+        session.flush()
+        session.add(TestCase(
+            id=uuid.uuid4(),
+            quest_id=q9.id,
+            input_data=None,
+            expected_output="100\n",
+            is_hidden=False,
+        ))
+
+        # 12) Learning paths: Level 1, 2, 3
         path1 = LearningPath(
             id=uuid.uuid4(),
             title="Python Basics",
@@ -251,7 +320,7 @@ def seed():
         )
         session.add(path2)
         session.flush()
-        for i, q in enumerate([q4, q5], start=1):
+        for i, q in enumerate([q4, q5, q6, q7], start=1):
             session.add(LearningPathQuest(
                 id=uuid.uuid4(),
                 path_id=path2.id,
@@ -268,15 +337,16 @@ def seed():
         )
         session.add(path3)
         session.flush()
-        session.add(LearningPathQuest(
-            id=uuid.uuid4(),
-            path_id=path3.id,
-            quest_id=q6.id,
-            order_rank=1,
-        ))
+        for i, q in enumerate([q8, q9], start=1):
+            session.add(LearningPathQuest(
+                id=uuid.uuid4(),
+                path_id=path3.id,
+                quest_id=q.id,
+                order_rank=i,
+            ))
 
         session.commit()
-        print("Seeded: 1 learner, 1 admin, 6 quests with test cases, 3 level-by-level learning paths.")
+        print("Seeded: 1 learner, 1 admin, 9 quests with test cases, 3 level-by-level learning paths.")
         print("  Learner: learner@codequest.dev / learner123")
         print("  Admin:   admin@codequest.dev / admin123")
     except Exception as e:

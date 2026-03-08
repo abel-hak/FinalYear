@@ -99,3 +99,46 @@ class TestCaseAdmin(BaseModel):
     class Config:
         from_attributes = True
 
+
+# Learning path admin schemas
+class LearningPathCreate(BaseModel):
+    title: str
+    description: str
+    level: int = 1
+    order_rank: int = 0
+
+
+class LearningPathUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    level: Optional[int] = None
+    order_rank: Optional[int] = None
+
+
+class LearningPathQuestAdmin(BaseModel):
+    id: UUID4
+    quest_id: UUID4
+    order_rank: int
+    quest_title: str
+    quest_level: int
+
+    class Config:
+        from_attributes = True
+
+
+class LearningPathAdmin(BaseModel):
+    id: UUID4
+    title: str
+    description: str
+    level: int
+    order_rank: int
+    quest_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+class LearningPathAddQuest(BaseModel):
+    quest_id: UUID4
+    order_rank: Optional[int] = None  # append at end if not set
+

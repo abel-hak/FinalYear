@@ -26,6 +26,8 @@ class QuestDetail(QuestBase):
     explanation_unlocked: bool = False
     explanation: str | None = None
     tags: list[str] = []
+    prev_id: UUID4 | None = None  # Previous quest in order, if any
+    next_id: UUID4 | None = None  # Next quest in order, if any
 
     class Config:
         from_attributes = True

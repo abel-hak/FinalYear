@@ -21,6 +21,7 @@ from app.models.user import User
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -90,6 +91,30 @@ async def get_current_learner(
     if current_user.role not in ("learner", "admin"):
         raise HTTPException(status_code=403, detail="Learner access required")
     return current_user
+
+
+async def get_current_learner_optional(
+    token: Annotated[Optional[str], Depends(oauth2_scheme_optional)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> Optional[User]:
+    """Optional auth: returns User if valid token, None otherwise."""
+    if not token:
+        return None
+    settings = get_settings()
+    secret = getattr(settings, "jwt_secret_key", None) or "dev-secret-change-me"
+    algorithm = getattr(settings, "jwt_algorithm", "HS256")
+    try:
+        payload = jwt.decode(token, secret, algorithms=[algorithm])
+        sub = payload.get("sub")
+        if not sub:
+            return None
+        result = await db.execute(select(User).where(User.id == sub, User.is_deleted.is_(False)))
+        user = result.scalar_one_or_none()
+        if not user or user.role not in ("learner", "admin"):
+            return None
+        return user
+    except JWTError:
+        return None
 
 
 async def get_current_admin(

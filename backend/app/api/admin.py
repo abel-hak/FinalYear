@@ -8,6 +8,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, text
+from sqlalchemy.orm import selectinload
 
 from app.db.session import get_db
 from app.core.security import get_current_admin
@@ -16,6 +17,7 @@ from app.models.learner import Learner
 from app.models.quest import Quest
 from app.models.test_case import TestCase
 from app.models.submission import Submission
+from app.models.learning_path import LearningPath, LearningPathQuest
 from app.config import get_settings
 from app.schemas.admin import (
     QuestCreate,
@@ -29,6 +31,11 @@ from app.schemas.admin import (
     AdminQuestCompletion,
     AdminDifficultyDistribution,
     AdminDailyActivity,
+    LearningPathCreate,
+    LearningPathUpdate,
+    LearningPathAdmin,
+    LearningPathQuestAdmin,
+    LearningPathAddQuest,
 )
 from pydantic import UUID4
 
@@ -321,6 +328,203 @@ async def create_test_case_admin(
     await db.flush()  # Get tc.id before response; get_db will commit
     await db.refresh(tc)
     return tc
+
+
+# --- Learning paths admin ---
+
+@router.get("/learning-paths", response_model=List[LearningPathAdmin])
+async def list_learning_paths_admin(
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all learning paths for admin management."""
+    result = await db.execute(
+        select(LearningPath)
+        .options(selectinload(LearningPath.path_quests))
+        .order_by(LearningPath.level, LearningPath.order_rank)
+    )
+    paths = list(result.scalars().all())
+    return [
+        LearningPathAdmin(
+            id=p.id,
+            title=p.title,
+            description=p.description,
+            level=p.level,
+            order_rank=p.order_rank,
+            quest_count=len(p.path_quests),
+        )
+        for p in paths
+    ]
+
+
+@router.post("/learning-paths", response_model=LearningPathAdmin, status_code=201)
+async def create_learning_path_admin(
+    payload: LearningPathCreate,
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new learning path."""
+    path = LearningPath(
+        title=payload.title,
+        description=payload.description,
+        level=payload.level,
+        order_rank=payload.order_rank,
+    )
+    db.add(path)
+    await db.commit()
+    await db.refresh(path)
+    return LearningPathAdmin(
+        id=path.id,
+        title=path.title,
+        description=path.description,
+        level=path.level,
+        order_rank=path.order_rank,
+        quest_count=0,
+    )
+
+
+@router.put("/learning-paths/{path_id}", response_model=LearningPathAdmin)
+async def update_learning_path_admin(
+    path_id: UUID4,
+    payload: LearningPathUpdate,
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update learning path fields."""
+    result = await db.execute(
+        select(LearningPath)
+        .options(selectinload(LearningPath.path_quests))
+        .where(LearningPath.id == path_id)
+    )
+    path = result.scalar_one_or_none()
+    if not path:
+        raise HTTPException(status_code=404, detail="Learning path not found")
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(path, field, value)
+
+    await db.commit()
+    await db.refresh(path)
+    return LearningPathAdmin(
+        id=path.id,
+        title=path.title,
+        description=path.description,
+        level=path.level,
+        order_rank=path.order_rank,
+        quest_count=len(path.path_quests),
+    )
+
+
+@router.delete("/learning-paths/{path_id}", status_code=204)
+async def delete_learning_path_admin(
+    path_id: UUID4,
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a learning path and its quest assignments."""
+    result = await db.execute(select(LearningPath).where(LearningPath.id == path_id))
+    path = result.scalar_one_or_none()
+    if not path:
+        raise HTTPException(status_code=404, detail="Learning path not found")
+
+    await db.delete(path)
+    await db.commit()
+    return
+
+
+@router.get("/learning-paths/{path_id}/quests", response_model=List[LearningPathQuestAdmin])
+async def list_learning_path_quests_admin(
+    path_id: UUID4,
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """List quests in a learning path."""
+    result = await db.execute(
+        select(LearningPathQuest, Quest)
+        .join(Quest, Quest.id == LearningPathQuest.quest_id)
+        .where(LearningPathQuest.path_id == path_id, Quest.is_deleted.is_(False))
+        .order_by(LearningPathQuest.order_rank)
+    )
+    rows = result.all()
+    return [
+        LearningPathQuestAdmin(
+            id=pq.id,
+            quest_id=pq.quest_id,
+            order_rank=pq.order_rank,
+            quest_title=q.title,
+            quest_level=q.level,
+        )
+        for pq, q in rows
+    ]
+
+
+@router.post("/learning-paths/{path_id}/quests", response_model=LearningPathQuestAdmin, status_code=201)
+async def add_quest_to_path_admin(
+    path_id: UUID4,
+    payload: LearningPathAddQuest,
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Add a quest to a learning path."""
+    path_result = await db.execute(
+        select(LearningPath)
+        .options(selectinload(LearningPath.path_quests))
+        .where(LearningPath.id == path_id)
+    )
+    path = path_result.scalar_one_or_none()
+    if not path:
+        raise HTTPException(status_code=404, detail="Learning path not found")
+
+    quest_result = await db.execute(select(Quest).where(Quest.id == payload.quest_id, Quest.is_deleted.is_(False)))
+    quest = quest_result.scalar_one_or_none()
+    if not quest:
+        raise HTTPException(status_code=404, detail="Quest not found")
+
+    existing = next((pq for pq in path.path_quests if pq.quest_id == payload.quest_id), None)
+    if existing:
+        raise HTTPException(status_code=400, detail="Quest already in this path")
+
+    max_rank = max((pq.order_rank for pq in path.path_quests), default=0)
+    order_rank = payload.order_rank if payload.order_rank is not None else max_rank + 1
+
+    pq = LearningPathQuest(
+        path_id=path_id,
+        quest_id=payload.quest_id,
+        order_rank=order_rank,
+    )
+    db.add(pq)
+    await db.commit()
+    await db.refresh(pq)
+    return LearningPathQuestAdmin(
+        id=pq.id,
+        quest_id=pq.quest_id,
+        order_rank=pq.order_rank,
+        quest_title=quest.title,
+        quest_level=quest.level,
+    )
+
+
+@router.delete("/learning-paths/{path_id}/quests/{quest_id}", status_code=204)
+async def remove_quest_from_path_admin(
+    path_id: UUID4,
+    quest_id: UUID4,
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove a quest from a learning path."""
+    result = await db.execute(
+        select(LearningPathQuest).where(
+            LearningPathQuest.path_id == path_id,
+            LearningPathQuest.quest_id == quest_id,
+        )
+    )
+    pq = result.scalar_one_or_none()
+    if not pq:
+        raise HTTPException(status_code=404, detail="Quest not in this path")
+
+    await db.delete(pq)
+    await db.commit()
+    return
 
 
 @router.post("/purge-submissions")
