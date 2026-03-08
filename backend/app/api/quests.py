@@ -4,11 +4,12 @@ Learner quest APIs.
 - List quests with status: completed/current/locked
 - Get quest detail (with initial_code; explanation only if completed)
 """
+from datetime import datetime, timedelta, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.db.session import get_db
 from app.models.quest import Quest
@@ -20,6 +21,7 @@ from app.models.user import User
 from app.schemas.quest import QuestSummary, QuestDetail
 from app.schemas.execute import SubmissionRequest, SubmissionResult
 from app.core.sandbox import run_python
+from app.config import get_settings
 from pydantic import UUID4
 
 
@@ -177,6 +179,34 @@ async def submit_quest(
             detail="Quest has no test cases configured",
         )
 
+    # Resolve learner early (needed for rate limit)
+    learner_row = await db.execute(
+        select(Learner).where(Learner.user_id == current_user.id, Learner.is_deleted.is_(False))
+    )
+    learner = learner_row.scalar_one_or_none()
+    if not learner:
+        learner = Learner(user_id=current_user.id)
+        db.add(learner)
+        await db.flush()
+
+    # Rate limit: N submissions per minute per learner (NFR-01.4, NFR-10.3)
+    limit = get_settings().submission_rate_limit_per_minute
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=60)
+    count_row = await db.execute(
+        select(func.count())
+        .select_from(Submission)
+        .where(
+            Submission.learner_id == learner.id,
+            Submission.created_at >= cutoff,
+        )
+    )
+    recent_count = int(count_row.scalar() or 0)
+    if recent_count >= limit:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Rate limit exceeded. Maximum {limit} code submissions per minute. Please wait before trying again.",
+        )
+
     # Run code once (MVP: test cases do not vary input)
     sandbox_result = run_python(payload.code, timeout_seconds=5)
 
@@ -189,16 +219,6 @@ async def submit_quest(
             if stdout == expected:
                 tests_passed += 1
     passed = tests_passed == tests_total and tests_total > 0
-
-    # Resolve learner id (create if missing, e.g. admin without Learner record)
-    learner_row = await db.execute(
-        select(Learner).where(Learner.user_id == current_user.id, Learner.is_deleted.is_(False))
-    )
-    learner = learner_row.scalar_one_or_none()
-    if not learner:
-        learner = Learner(user_id=current_user.id)
-        db.add(learner)
-        await db.flush()
 
     # Check if learner already passed this quest before
     prev_pass = await db.execute(
@@ -229,7 +249,6 @@ async def submit_quest(
             learner.current_level = quest.level
 
     # Update streak (any submission counts as activity)
-    from datetime import datetime, timedelta, timezone
     today = datetime.now(timezone.utc).date()
     last = learner.last_activity_date
     if last is None:

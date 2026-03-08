@@ -201,7 +201,7 @@ FinalYear/
 | **M3** | Backend APIs | Auth, quests list/get, run code, submit, progress, admin CRUD | Postman/curl can register, login, get quests, submit and get progress. |
 | **M4** | Frontend UI | Login/register, learner dashboard + progress map, quest page with editor, run/submit, Knowledge Scroll | Learner can complete a full quest flow in the browser. |
 | **M5** | Auth & security | JWT enforcement, RBAC, rate limit, validation | Only authorized roles access admin; submission rate limited. |
-| **M6** | Hints & tests | Hint API + “Request Hint” in UI; unit/integration tests | Hints work; critical paths covered by tests. |
+| **M6** | Hints & tests | Hint API + “Request Hint” in UI; unit/integration tests | Hints work; critical paths covered by tests. ✓ |
 
 ---
 

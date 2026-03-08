@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     ai_api_key: str | None = None
     ai_model: str = "gpt-4o-mini"
 
+    # Rate limiting (NFR-01.4, NFR-10.3)
+    submission_rate_limit_per_minute: int = 5
+
 
 @lru_cache
 def get_settings() -> Settings:

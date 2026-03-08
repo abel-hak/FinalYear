@@ -27,7 +27,6 @@ async def test_learner_login_and_progress(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.xfail(reason="Admin httpx+asyncpg flow is flaky on Windows event loop; non-critical for core learner flow.")
 async def test_admin_login_and_list_quests(client: AsyncClient) -> None:
     """Admin can log in and list quests."""
     # NOTE: relies on seeded admin1 / admin123 from scripts.seed
@@ -50,7 +49,6 @@ async def test_admin_login_and_list_quests(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.xfail(reason="Admin httpx+asyncpg flow is flaky on Windows event loop; non-critical for core learner flow.")
 async def test_admin_cannot_reuse_order_rank(client: AsyncClient) -> None:
     """Creating a quest with an existing order_rank returns 400."""
     # Login as admin

@@ -3,7 +3,7 @@ Submission / Quest completion - records learner attempts and completion for prog
 Used to know which quests are completed (unlock next + Knowledge Scroll).
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Text, Boolean, DateTime, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -39,7 +39,7 @@ class Submission(Base):
     # Optional: store run output or error for debugging/analytics
     output_log: Mapped[str | None] = mapped_column(Text, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     learner: Mapped["Learner"] = relationship("Learner", back_populates="submissions")
     quest: Mapped["Quest"] = relationship("Quest", back_populates="submissions")
