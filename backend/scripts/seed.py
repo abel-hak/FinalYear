@@ -102,6 +102,7 @@ def seed():
             initial_code='x = 5\nprint(x + 3)  # should print 10',
             solution_code='x = 7\nprint(x + 3)  # prints 10',
             explanation="You needed to set x = 7 so that x + 3 equals 10.",
+            tags=["variables", "arithmetic"],
         )
         session.add(q1)
         session.flush()
@@ -144,6 +145,7 @@ def seed():
             initial_code='n = 4\nif n % 2 == 1:\n    print("even")\nelse:\n    print("odd")',
             solution_code='n = 4\nif n % 2 == 0:\n    print("even")\nelse:\n    print("odd")',
             explanation="n % 2 == 0 is True for even numbers. Use == 0 for 'even', not == 1.",
+            tags=["conditions", "modulo"],
         )
         session.add(q3)
         session.flush()

@@ -12,6 +12,7 @@ export interface QuestSummaryDto {
   level: number;
   order_rank: number;
   status: QuestStatus;
+  tags?: string[];
 }
 
 export interface ProgressSummaryDto {
@@ -20,6 +21,17 @@ export interface ProgressSummaryDto {
   streak_days?: number;
   last_activity_date?: string | null;  // YYYY-MM-DD (US-013)
   quests: QuestSummaryDto[];
+}
+
+export interface ReviewSuggestionDto {
+  id: string;
+  title: string;
+  description: string;
+  level: number;
+  order_rank: number;
+  tags?: string[];
+  last_completed_at: string;
+  days_since_completion: number;
 }
 
 export interface QuestDetailDto {
@@ -232,6 +244,21 @@ export async function fetchProgress(): Promise<ProgressSummaryDto> {
     throw new Error(`Failed to load progress: ${res.status}`);
   }
   return (await res.json()) as ProgressSummaryDto;
+}
+
+export async function fetchReviewSuggestions(): Promise<ReviewSuggestionDto[]> {
+  const token = getToken();
+  if (!token) return [];
+  const res = await fetch(`${API_BASE}/api/v1/progress/review-suggestions`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    if (res.status === 401) {
+      clearAuth();
+    }
+    return [];
+  }
+  return (await res.json()) as ReviewSuggestionDto[];
 }
 
 export interface LeaderboardEntryDto {

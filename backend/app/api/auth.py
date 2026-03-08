@@ -7,12 +7,13 @@ Per documentation:
 """
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.config import get_settings
+from app.core.rate_limit import _login_limiter
 from app.db.session import get_db
 from app.models.user import User
 from app.models.learner import Learner
@@ -68,15 +69,33 @@ async def register_user(
     return user
 
 
+def _get_client_ip(request: Request) -> str:
+    """Get client IP, considering X-Forwarded-For when behind proxy."""
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return "unknown"
+
+
 @router.post("/login", response_model=Token)
 async def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
     """
     OAuth2 password flow login.
     Accepts username + password; returns JWT access token.
+    Rate limited: 5 attempts per minute per IP.
     """
+    ip = _get_client_ip(request)
+    if not _login_limiter.is_allowed(f"login:{ip}"):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many login attempts. Please try again in a minute.",
+        )
     result = await db.execute(
         select(User).where(User.username == form_data.username, User.is_deleted.is_(False))
     )

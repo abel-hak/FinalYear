@@ -238,6 +238,7 @@ async def create_quest_admin(
         initial_code=payload.initial_code,
         solution_code=payload.solution_code,
         explanation=payload.explanation,
+        tags=payload.tags or [],
     )
     db.add(quest)
     await db.commit()

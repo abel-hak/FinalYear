@@ -6,7 +6,7 @@ Order field added for strictly linear progress map (Quest 1 -> 2 -> 3).
 import uuid
 from datetime import datetime
 from sqlalchemy import String, Integer, Text, DateTime, Boolean
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -30,6 +30,7 @@ class Quest(Base):
     initial_code: Mapped[str] = mapped_column(Text, nullable=False)
     solution_code: Mapped[str] = mapped_column(Text, nullable=False)
     explanation: Mapped[str] = mapped_column(Text, nullable=False)
+    tags: Mapped[list] = mapped_column(JSONB, default=list, nullable=False)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)

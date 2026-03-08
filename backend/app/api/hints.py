@@ -14,6 +14,7 @@ from sqlalchemy import select, func
 from app.db.session import get_db
 from app.core.security import get_current_learner
 from app.core.ai import generate_hint
+from app.core.rate_limit import _hint_limiter
 from app.models.user import User
 from app.models.quest import Quest
 from app.models.learner import Learner
@@ -60,6 +61,13 @@ async def get_ai_hint(
     current_user: User = Depends(get_current_learner),
     db: AsyncSession = Depends(get_db),
 ) -> AiHintResponse:
+    # Rate limit: 10 hint requests per minute per learner
+    hint_key = f"hint:{current_user.id}"
+    if not _hint_limiter.is_allowed(hint_key):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many hint requests. Please wait a minute before requesting more hints.",
+        )
     # Resolve learner
     learner_row = await db.execute(
         select(Learner).where(Learner.user_id == current_user.id, Learner.is_deleted.is_(False))

@@ -57,6 +57,7 @@ class QuestAdminBase(BaseModel):
     initial_code: str
     solution_code: str
     explanation: str
+    tags: List[str] = []
 
 
 class QuestCreate(QuestAdminBase):
@@ -71,6 +72,7 @@ class QuestUpdate(BaseModel):
     initial_code: Optional[str] = None
     solution_code: Optional[str] = None
     explanation: Optional[str] = None
+    tags: Optional[List[str]] = None
 
 
 class QuestAdmin(QuestAdminBase):

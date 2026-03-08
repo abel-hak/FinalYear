@@ -4,17 +4,18 @@ import HeroSection from '@/components/HeroSection';
 import QuestCard, { Quest } from '@/components/QuestCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Trophy, Zap, BookOpen } from 'lucide-react';
+import { ArrowRight, Trophy, Zap, BookOpen, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Mascot from '@/components/Mascot';
 import OnboardingTutorial from '@/components/OnboardingTutorial';
 import DailyActivityBanner from '@/components/DailyActivityBanner';
-import { fetchProgress } from '@/api/backend';
+import { fetchProgress, fetchReviewSuggestions, type ReviewSuggestionDto } from '@/api/backend';
 
 const Index = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
   const [featuredQuests, setFeaturedQuests] = useState<Quest[]>([]);
+  const [reviewSuggestions, setReviewSuggestions] = useState<ReviewSuggestionDto[]>([]);
   const [completedCount, setCompletedCount] = useState(0);
   const [totalXP, setTotalXP] = useState(0);
   const [lastActivityDate, setLastActivityDate] = useState<string | null | undefined>(undefined);
@@ -32,7 +33,10 @@ const Index = () => {
   useEffect(() => {
     async function load() {
       try {
-        const progress = await fetchProgress();
+        const [progress, suggestions] = await Promise.all([
+          fetchProgress(),
+          fetchReviewSuggestions(),
+        ]);
         setTotalXP(progress.total_points);
         setLastActivityDate(progress.last_activity_date ?? null);
         const completed = progress.quests.filter((q) => q.status === 'completed').length;
@@ -55,9 +59,11 @@ const Index = () => {
             status,
             xp: 50,
             estimatedTime: '5 min',
+            tags: q.tags ?? [],
           };
         });
         setFeaturedQuests(mapped);
+        setReviewSuggestions(suggestions);
       } catch {
         // if not logged in or fails, keep defaults (no featured quests, no banner)
       }
@@ -137,6 +143,59 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* Spaced repetition: suggest revisiting quests completed 7+ days ago */}
+      {reviewSuggestions.length > 0 && (
+        <section className="py-16 border-y border-border bg-secondary/20">
+          <div className="container">
+            <div className="flex flex-col md:flex-row md:items-end justify-between mb-8">
+              <div>
+                <Badge variant="secondary" className="mb-4 flex items-center gap-1 w-fit">
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Practice for reinforcement
+                </Badge>
+                <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+                  Time to review
+                </h2>
+                <p className="text-muted-foreground mt-4">
+                  You completed these quests 7+ days ago. Revisit them to reinforce concepts.
+                </p>
+              </div>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {reviewSuggestions.map((s) => (
+                <Link key={s.id} to={`/quest/${s.id}`}>
+                  <div className="p-4 rounded-xl bg-card border border-border hover:border-primary/50 transition-colors group">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-muted-foreground">
+                        Completed {s.days_since_completion} days ago
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                      {s.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {s.description}
+                    </p>
+                    {s.tags && s.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-3">
+                        {s.tags.slice(0, 3).map((tag) => (
+                          <span
+                            key={tag}
+                            className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
       
       {/* Stats Section */}
       <section className="py-16 border-y border-border bg-secondary/30">

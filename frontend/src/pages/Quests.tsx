@@ -10,6 +10,7 @@ import { fetchProgress } from '@/api/backend';
 
 const Quests: React.FC = () => {
   const [filter, setFilter] = React.useState<string>('all');
+  const [tagFilter, setTagFilter] = React.useState<string>('all');
   const [quests, setQuests] = React.useState<Quest[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -43,6 +44,7 @@ const Quests: React.FC = () => {
             status,
             xp: 50,
             estimatedTime: '5 min',
+            tags: q.tags ?? [],
           };
         });
         setQuests(mapped);
@@ -67,8 +69,19 @@ const Quests: React.FC = () => {
   const completedCount = quests.filter((q) => q.status === 'completed').length;
   const totalXP = quests.filter((q) => q.status === 'completed').reduce((sum, q) => sum + q.xp, 0);
 
-  const filteredQuests =
-    filter === 'all' ? quests : quests.filter((q) => q.difficulty === filter);
+  // Collect all unique tags for filter options
+  const allTags = React.useMemo(() => {
+    const set = new Set<string>();
+    quests.forEach((q) => (q.tags ?? []).forEach((t) => set.add(t)));
+    return Array.from(set).sort();
+  }, [quests]);
+
+  const filteredQuests = React.useMemo(() => {
+    let result = quests;
+    if (filter !== 'all') result = result.filter((q) => q.difficulty === filter);
+    if (tagFilter !== 'all') result = result.filter((q) => (q.tags ?? []).includes(tagFilter));
+    return result;
+  }, [quests, filter, tagFilter]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -136,22 +149,46 @@ const Quests: React.FC = () => {
         </div>
         
         {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3 mb-8">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Filter className="w-4 h-4" />
-            Filter:
+        <div className="space-y-4 mb-8">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Filter className="w-4 h-4" />
+              Difficulty:
+            </div>
+            {['all', 'beginner', 'intermediate', 'advanced'].map((level) => (
+              <Button
+                key={level}
+                variant={filter === level ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFilter(level)}
+                className="capitalize"
+              >
+                {level}
+              </Button>
+            ))}
           </div>
-          {['all', 'beginner', 'intermediate', 'advanced'].map((level) => (
-            <Button
-              key={level}
-              variant={filter === level ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter(level)}
-              className="capitalize"
-            >
-              {level}
-            </Button>
-          ))}
+          {allTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground">Concepts:</span>
+              <Button
+                variant={tagFilter === 'all' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setTagFilter('all')}
+              >
+                All
+              </Button>
+              {allTags.map((tag) => (
+                <Button
+                  key={tag}
+                  variant={tagFilter === tag ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTagFilter(tag)}
+                >
+                  {tag}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
         
         {/* Quest Grid */}

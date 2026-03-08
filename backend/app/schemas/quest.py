@@ -14,6 +14,7 @@ class QuestBase(BaseModel):
 class QuestSummary(QuestBase):
     id: UUID4
     status: str  # 'completed' | 'current' | 'locked'
+    tags: list[str] = []
 
     class Config:
         from_attributes = True
@@ -24,6 +25,7 @@ class QuestDetail(QuestBase):
     initial_code: str
     explanation_unlocked: bool = False
     explanation: str | None = None
+    tags: list[str] = []
 
     class Config:
         from_attributes = True

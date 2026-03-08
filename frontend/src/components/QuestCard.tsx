@@ -13,6 +13,7 @@ export interface Quest {
   status: 'locked' | 'available' | 'in-progress' | 'completed';
   xp: number;
   estimatedTime: string;
+  tags?: string[];
 }
 
 interface QuestCardProps {
@@ -69,6 +70,17 @@ const QuestCard: React.FC<QuestCardProps> = ({ quest, onClick, className }) => {
       <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
         {quest.description}
       </p>
+
+      {/* Concept tags */}
+      {quest.tags && quest.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {quest.tags.map((tag) => (
+            <Badge key={tag} variant="outline" className="text-xs font-normal">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      )}
       
       {/* Footer */}
       <div className="flex items-center justify-between text-xs text-muted-foreground">

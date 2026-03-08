@@ -90,6 +90,7 @@ async def list_quests(
                 level=q.level,
                 order_rank=q.order_rank,
                 status=status,
+                tags=q.tags if q.tags else [],
             )
         )
     return summaries
@@ -145,6 +146,7 @@ async def get_quest(
         initial_code=quest.initial_code,
         explanation_unlocked=completed,
         explanation=quest.explanation if completed else None,
+        tags=quest.tags if quest.tags else [],
     )
 
 
