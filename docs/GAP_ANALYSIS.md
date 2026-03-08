@@ -69,13 +69,11 @@ This document compares the implemented system against the requirements in **Fina
 
 ---
 
-### 5. **NFR-11.2 – Submissions/logs purged every 30 days**
+### 5. **NFR-11.2 – Submissions/logs purged every 30 days** ✅
 
 **Document:** *"Submissions/logs purged every 30 days for cost management."*
 
-**Status:** No purge job. Submissions and `output_log` are kept indefinitely.
-
-**Action:** Add a scheduled job or migration script to purge/archive submissions older than 30 days (or implement retention policy).
+**Status:** Implemented. Purge keeps the most recent passed submission per (learner, quest) for progress; deletes failed and redundant passed submissions older than 30 days. CLI script `python -m scripts.purge_submissions` (schedule via cron). Admin endpoint `POST /admin/purge-submissions` for manual trigger. Config: `submission_retention_days` (default 30).
 
 ---
 

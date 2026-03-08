@@ -29,7 +29,10 @@ pytest
 Current tests cover:
 - Learner login + `GET /api/v1/progress`
 - Admin login + `GET /api/v1/admin/quests`
-- Admin quest creation validation for duplicate `order_rank`.
+- Admin quest creation validation for duplicate `order_rank`
+- Admin remove learner (US-014)
+- Admin purge submissions (NFR-11.2)
+- Quest submission (pass/fail, rate limit, System Busy)
 
 ### 2. Frontend manual test checklist
 

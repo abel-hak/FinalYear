@@ -7,7 +7,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text
 
 from app.db.session import get_db
 from app.core.security import get_current_admin
@@ -16,6 +16,7 @@ from app.models.learner import Learner
 from app.models.quest import Quest
 from app.models.test_case import TestCase
 from app.models.submission import Submission
+from app.config import get_settings
 from app.schemas.admin import (
     QuestCreate,
     QuestUpdate,
@@ -319,6 +320,39 @@ async def create_test_case_admin(
     await db.flush()  # Get tc.id before response; get_db will commit
     await db.refresh(tc)
     return tc
+
+
+@router.post("/purge-submissions")
+async def purge_submissions_admin(
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Purge submissions older than retention period (NFR-11.2). Preserves progress."""
+    retention_days = get_settings().submission_retention_days
+    cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+
+    r1 = await db.execute(
+        text("DELETE FROM submissions WHERE created_at < :cutoff AND passed = false"),
+        {"cutoff": cutoff},
+    )
+    failed_deleted = r1.rowcount
+
+    r2 = await db.execute(
+        text("""
+            DELETE FROM submissions s
+            WHERE s.created_at < :cutoff AND s.passed = true
+            AND EXISTS (
+                SELECT 1 FROM submissions s2
+                WHERE s2.learner_id = s.learner_id AND s2.quest_id = s.quest_id
+                AND s2.passed = true AND s2.created_at >= :cutoff
+            )
+        """),
+        {"cutoff": cutoff},
+    )
+    passed_deleted = r2.rowcount
+
+    await db.commit()
+    return {"purged": failed_deleted + passed_deleted, "retention_days": retention_days}
 
 
 @router.delete("/users/{user_id}", status_code=204)

@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     # Rate limiting (NFR-01.4, NFR-10.3)
     submission_rate_limit_per_minute: int = 5
 
+    # Data retention (NFR-11.2)
+    submission_retention_days: int = 30
+
 
 @lru_cache
 def get_settings() -> Settings:

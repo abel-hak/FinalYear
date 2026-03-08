@@ -150,3 +150,25 @@ async def test_admin_remove_learner(client: AsyncClient) -> None:
     usernames = [u["username"] for u in users_after.json()]
     assert f"toremove_{uid}" not in usernames
 
+
+@pytest.mark.asyncio
+async def test_admin_purge_submissions(client: AsyncClient) -> None:
+    """Admin can trigger submission purge (NFR-11.2)."""
+    login = await client.post(
+        "/api/v1/auth/login",
+        data={"username": "admin1", "password": "admin123"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert login.status_code == 200, login.text
+    token = login.json()["access_token"]
+
+    resp = await client.post(
+        "/api/v1/admin/purge-submissions",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert "purged" in body
+    assert "retention_days" in body
+    assert isinstance(body["purged"], int) and body["purged"] >= 0
+
