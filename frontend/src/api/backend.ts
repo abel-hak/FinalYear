@@ -281,6 +281,9 @@ export async function submitQuestSolution(
       clearAuth();
       throw new Error("Unauthorized");
     }
+    if (res.status === 503) {
+      throw new Error(body.detail || "System Busy. Please try again later.");
+    }
     throw new Error(body.detail || `Submission failed (${res.status})`);
   }
   return (await res.json()) as SubmissionResultDto;

@@ -72,7 +72,7 @@ const localQuestMeta: Record<
   }
 };
 
-type FeedbackState = 'none' | 'success' | 'error' | 'timeout';
+type FeedbackState = 'none' | 'success' | 'error' | 'timeout' | 'system_busy';
 type MascotMood = 'idle' | 'thinking' | 'celebrating' | 'sad' | 'encouraging' | 'happy';
 
 const QuestPage: React.FC = () => {
@@ -142,6 +142,9 @@ const QuestPage: React.FC = () => {
     } else if (feedback === 'error') {
       setMascotMood('encouraging');
       setMascotMessage("Don't give up! Check the hints if you're stuck.");
+    } else if (feedback === 'system_busy') {
+      setMascotMood('encouraging');
+      setMascotMessage("The system is a bit busy. Try again in a moment!");
     } else if (feedback === 'timeout') {
       setMascotMood('sad');
       setMascotMessage("Time's running short! Need a hint?");
@@ -194,8 +197,14 @@ const QuestPage: React.FC = () => {
       setOutput((result.stdout || '') + (result.stderr || ''));
       setIsTimerRunning(false);
     } catch (e: any) {
-      setFeedback('error');
-      setOutput(e.message ?? 'Submission failed');
+      const msg = e.message ?? 'Submission failed';
+      if (msg.includes('System Busy')) {
+        setFeedback('system_busy');
+        setOutput(msg);
+      } else {
+        setFeedback('error');
+        setOutput(msg);
+      }
     }
   };
   
@@ -393,6 +402,14 @@ const QuestPage: React.FC = () => {
               </div>
             )}
             
+            {feedback === 'system_busy' && (
+              <FeedbackPanel
+                type="info"
+                title="System Busy"
+                message="We're experiencing high load. Please try again in a moment."
+                output={output}
+              />
+            )}
             {feedback === 'error' && (
               <div className="space-y-4">
                 <FeedbackPanel

@@ -1,9 +1,11 @@
 """
 M6: Quest submission flow integration tests.
 
-Tests that a learner can submit code, get pass/fail, progress updates, and rate limiting.
+Tests that a learner can submit code, get pass/fail, progress updates, rate limiting,
+and System Busy for system errors (NFR-01.3).
 """
 import uuid
+from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
@@ -156,3 +158,22 @@ async def test_submit_rate_limit_5_per_minute(client: AsyncClient, monkeypatch) 
     finally:
         monkeypatch.delenv("SUBMISSION_RATE_LIMIT_PER_MINUTE", raising=False)
         get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_submit_system_busy_on_sandbox_error(client: AsyncClient) -> None:
+    """When sandbox fails, returns 503 System Busy (NFR-01.3)."""
+    token = await _login_learner(client)
+    quest = await _get_first_quest(client, token)
+    quest_id = quest["id"]
+
+    with patch("app.api.quests.run_python", side_effect=OSError("sandbox unavailable")):
+        resp = await client.post(
+            f"/api/v1/quests/{quest_id}/submit",
+            json={"code": "print(1)"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert resp.status_code == 503, f"Expected 503 (System Busy), got {resp.status_code}: {resp.text}"
+    body = resp.json()
+    assert "detail" in body
+    assert "system busy" in body["detail"].lower()

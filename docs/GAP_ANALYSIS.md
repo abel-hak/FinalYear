@@ -43,15 +43,11 @@ This document compares the implemented system against the requirements in **Fina
 
 ---
 
-### 2. **NFR-01.3 – "System Busy" for system errors**
+### 2. **NFR-01.3 – "System Busy" for system errors** ✅
 
 **Document:** *"Present 'System Busy' message rather than 'Failed Quest' for system-level errors."*
 
-**Status:** When sandbox/API fails, the UI likely shows generic error or "Submission failed". The doc requires distinguishing:
-- **User error** (wrong code) → show "Failed" / quest feedback
-- **System error** (sandbox crash, timeout, DB error) → show "System Busy"
-
-**Action:** Detect system-level failures (503, timeout, unhandled exceptions) and return a distinct "System Busy" message in the UI.
+**Status:** Implemented. System errors (sandbox failure, DB error, quest with no test cases) return 503 with "System Busy. Please try again later." The frontend shows an info-style panel with "System Busy" instead of "Not Quite Right".
 
 ---
 

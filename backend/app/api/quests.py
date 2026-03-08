@@ -10,6 +10,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.session import get_db
 from app.models.quest import Quest
@@ -175,8 +176,8 @@ async def submit_quest(
     test_cases: list[TestCase] = list(tc_result.scalars().all())
     if not test_cases:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Quest has no test cases configured",
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="System Busy. Please try again later.",
         )
 
     # Resolve learner early (needed for rate limit)
@@ -208,7 +209,13 @@ async def submit_quest(
         )
 
     # Run code once (MVP: test cases do not vary input)
-    sandbox_result = run_python(payload.code, timeout_seconds=5)
+    try:
+        sandbox_result = run_python(payload.code, timeout_seconds=5)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="System Busy. Please try again later.",
+        )
 
     tests_total = len(test_cases)
     tests_passed = 0
@@ -263,7 +270,13 @@ async def submit_quest(
         learner.streak_days = 1
         learner.last_activity_date = today
 
-    await db.commit()
+    try:
+        await db.commit()
+    except SQLAlchemyError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="System Busy. Please try again later.",
+        )
 
     return SubmissionResult(
         quest_id=quest.id,
