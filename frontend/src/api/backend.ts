@@ -125,6 +125,23 @@ export async function fetchAdminUsers(): Promise<AdminUserProgressDto[]> {
   return adminFetch<AdminUserProgressDto[]>("/users");
 }
 
+export async function removeAdminUser(userId: string): Promise<void> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(`${API_BASE}/api/v1/admin/users/${userId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Failed to remove user (${res.status})`);
+  }
+}
+
 export async function fetchAdminAnalytics(): Promise<AdminAnalyticsDto> {
   return adminFetch<AdminAnalyticsDto>("/analytics");
 }

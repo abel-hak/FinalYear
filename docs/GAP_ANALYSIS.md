@@ -51,13 +51,11 @@ This document compares the implemented system against the requirements in **Fina
 
 ---
 
-### 3. **US-014 / Admin – Remove learners for repeated offenses**
+### 3. **US-014 / Admin – Remove learners for repeated offenses** ✅
 
 **Document:** *"As an Admin, I want to be able to remove any learners that cause repeated offenses."*
 
-**Status:** No admin API or UI to remove/ban learners. Users can be soft-deleted (`is_deleted`) but there is no admin endpoint or UI for this.
-
-**Action:** Add admin endpoint (e.g. `DELETE /admin/users/{id}` or `POST /admin/users/{id}/ban`) and UI in Admin Dashboard to remove/ban learners.
+**Status:** Implemented. `DELETE /admin/users/{user_id}` soft-deletes User and Learner. Admin Dashboard Users tab has a Remove button with confirmation dialog. Removed learners cannot log in.
 
 ---
 

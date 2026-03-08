@@ -88,3 +88,65 @@ async def test_admin_cannot_reuse_order_rank(client: AsyncClient) -> None:
     body = create.json()
     assert "order" in body.get("detail", "").lower()
 
+
+@pytest.mark.asyncio
+async def test_admin_remove_learner(client: AsyncClient) -> None:
+    """Admin can remove a learner (US-014). Removed learner cannot log in."""
+    import uuid
+
+    # Register a new learner
+    uid = str(uuid.uuid4())[:8]
+    reg = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "username": f"toremove_{uid}",
+            "email": f"toremove_{uid}@test.dev",
+            "password": "test123",
+            "role": "learner",
+        },
+    )
+    assert reg.status_code == 201, reg.text
+
+    # Login as admin
+    login = await client.post(
+        "/api/v1/auth/login",
+        data={"username": "admin1", "password": "admin123"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert login.status_code == 200, login.text
+    token = login.json()["access_token"]
+
+    # Get user list and find the new learner
+    users_resp = await client.get(
+        "/api/v1/admin/users",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert users_resp.status_code == 200, users_resp.text
+    users = users_resp.json()
+    target = next((u for u in users if u["username"] == f"toremove_{uid}"), None)
+    assert target is not None, f"Expected toremove_{uid} in users list"
+
+    # Remove the learner
+    delete_resp = await client.delete(
+        f"/api/v1/admin/users/{target['id']}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert delete_resp.status_code == 204, delete_resp.text
+
+    # Verify learner cannot log in
+    learner_login = await client.post(
+        "/api/v1/auth/login",
+        data={"username": f"toremove_{uid}", "password": "test123"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert learner_login.status_code == 401, learner_login.text
+
+    # Verify learner is no longer in admin users list
+    users_after = await client.get(
+        "/api/v1/admin/users",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert users_after.status_code == 200
+    usernames = [u["username"] for u in users_after.json()]
+    assert f"toremove_{uid}" not in usernames
+

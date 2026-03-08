@@ -3,9 +3,20 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useState, useEffect } from "react";
-import { Search, Loader2 } from "lucide-react";
-import { fetchAdminUsers, type AdminUserProgressDto } from "@/api/backend";
+import { Search, Loader2, UserMinus } from "lucide-react";
+import { fetchAdminUsers, removeAdminUser, type AdminUserProgressDto } from "@/api/backend";
 import { useToast } from "@/components/ui/use-toast";
 
 function formatLastActive(iso: string | null): string {
@@ -27,6 +38,16 @@ export const UserProgressTable = () => {
   const [users, setUsers] = useState<AdminUserProgressDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [removeTarget, setRemoveTarget] = useState<AdminUserProgressDto | null>(null);
+  const [removing, setRemoving] = useState(false);
+
+  const refreshUsers = () => {
+    fetchAdminUsers()
+      .then(setUsers)
+      .catch((e) => {
+        toast({ title: "Failed to load users", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+      });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -40,6 +61,21 @@ export const UserProgressTable = () => {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [toast]);
+
+  const handleRemoveConfirm = async () => {
+    if (!removeTarget) return;
+    setRemoving(true);
+    try {
+      await removeAdminUser(removeTarget.id);
+      toast({ title: "Learner removed", description: `${removeTarget.username} has been removed.` });
+      setRemoveTarget(null);
+      refreshUsers();
+    } catch (e) {
+      toast({ title: "Failed to remove learner", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setRemoving(false);
+    }
+  };
 
   const filteredUsers = users.filter(
     (u) =>
@@ -74,6 +110,7 @@ export const UserProgressTable = () => {
                   <TableHead>Progress</TableHead>
                   <TableHead className="text-right">XP</TableHead>
                   <TableHead>Last Active</TableHead>
+                  <TableHead className="w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -105,6 +142,17 @@ export const UserProgressTable = () => {
                       </TableCell>
                       <TableCell className="text-right font-medium">{user.xp_earned.toLocaleString()}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{formatLastActive(user.last_active)}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setRemoveTarget(user)}
+                          title="Remove learner"
+                        >
+                          <UserMinus className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -140,6 +188,15 @@ export const UserProgressTable = () => {
                     <span className="font-medium">{user.xp_earned.toLocaleString()} XP</span>
                     <span className="text-muted-foreground">{formatLastActive(user.last_active)}</span>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-destructive border-destructive/50 hover:bg-destructive/10"
+                    onClick={() => setRemoveTarget(user)}
+                  >
+                    <UserMinus className="w-4 h-4 mr-2" />
+                    Remove
+                  </Button>
                 </div>
               );
             })}
@@ -152,6 +209,32 @@ export const UserProgressTable = () => {
           <p>{searchQuery ? "No users match your search." : "No learners yet."}</p>
         </div>
       )}
+
+      <AlertDialog open={!!removeTarget} onOpenChange={(open) => !open && setRemoveTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove learner?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {removeTarget
+                ? `This will remove ${removeTarget.username} (${removeTarget.email}) from the platform. They will no longer be able to log in. This action can be reversed by an administrator.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleRemoveConfirm();
+              }}
+              disabled={removing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {removing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

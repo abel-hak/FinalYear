@@ -321,6 +321,45 @@ async def create_test_case_admin(
     return tc
 
 
+@router.delete("/users/{user_id}", status_code=204)
+async def remove_learner_admin(
+    user_id: UUID4,
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Remove a learner (soft-delete User and Learner). US-014."""
+    result = await db.execute(
+        select(User, Learner)
+        .outerjoin(Learner, Learner.user_id == User.id)
+        .where(User.id == user_id, User.is_deleted.is_(False))
+    )
+    row = result.one_or_none()
+    if not row:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user, learner = row
+    if user.role != "learner":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only learners can be removed. Admins cannot be removed via this endpoint.",
+        )
+
+    now = datetime.now(timezone.utc)
+    admin_id = current_admin.id
+
+    user.is_deleted = True
+    user.deleted_at = now
+    user.deleted_by = admin_id
+
+    if learner:
+        learner.is_deleted = True
+        learner.deleted_at = now
+        learner.deleted_by = admin_id
+
+    await db.commit()
+    return
+
+
 @router.delete("/testcases/{test_case_id}", status_code=204)
 async def delete_test_case_admin(
     test_case_id: UUID4,
