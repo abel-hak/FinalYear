@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Code2, Map, Trophy, User, Sparkles, Menu, X, HelpCircle, Shield, LayoutDashboard } from 'lucide-react';
+import { Code2, Map, Trophy, User, Sparkles, Menu, X, HelpCircle, Shield, LayoutDashboard, Flame } from 'lucide-react';
 import ProgressBar from './ProgressBar';
 import { fetchProgress, getToken, getRole, clearAuth } from '@/api/backend';
 import {
@@ -19,6 +19,7 @@ const Header: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userXP, setUserXP] = useState(0);
   const [userLevel, setUserLevel] = useState(0);
+  const [userStreak, setUserStreak] = useState(0);
   const [xpToNextLevel, setXpToNextLevel] = useState(100);
   const location = useLocation();
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ const Header: React.FC = () => {
     if (!token) {
       setUserXP(0);
       setUserLevel(0);
+      setUserStreak(0);
       setXpToNextLevel(100);
       setRole(null);
       return;
@@ -41,11 +43,13 @@ const Header: React.FC = () => {
         if (cancelled) return;
         setUserXP(progress.total_points);
         setUserLevel(progress.current_level);
+        setUserStreak(progress.streak_days ?? 0);
         setXpToNextLevel(progress.current_level * 100 || 100);
       } catch {
         if (!cancelled) {
           setUserXP(0);
           setUserLevel(0);
+          setUserStreak(0);
           setXpToNextLevel(100);
         }
       }
@@ -61,6 +65,7 @@ const Header: React.FC = () => {
     ...(role === 'admin' ? [{ to: '/admin', label: 'Admin', icon: LayoutDashboard }] : []),
     { to: '/quests', label: 'Quests', icon: Map },
     { to: '/achievements', label: 'Achievements', icon: Trophy },
+    { to: '/leaderboard', label: 'Leaderboard', icon: Flame },
     { to: '/faq', label: 'Help', icon: HelpCircle },
     { to: '/access-control-security', label: 'Docs', icon: Shield },
   ];
@@ -112,6 +117,12 @@ const Header: React.FC = () => {
             <Badge variant="glass" className="font-bold">
               Lv. {userLevel}
             </Badge>
+            {userStreak > 0 && (
+              <Badge variant="secondary" className="gap-1">
+                <Flame className="w-3.5 h-3.5 text-orange-500" />
+                {userStreak}
+              </Badge>
+            )}
           </div>
 
           {/* User Avatar / Profile menu */}
@@ -174,12 +185,18 @@ const Header: React.FC = () => {
             })}
             
             {/* Mobile XP */}
-            <div className="pt-4 border-t border-border flex items-center gap-3">
+            <div className="pt-4 border-t border-border flex items-center gap-3 flex-wrap">
               <Badge variant="gold" className="flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
                 {userXP} XP
               </Badge>
               <Badge variant="glass">Lv. {userLevel}</Badge>
+              {userStreak > 0 && (
+                <Badge variant="secondary" className="gap-1">
+                  <Flame className="w-3 h-3 text-orange-500" />
+                  {userStreak}
+                </Badge>
+              )}
             </div>
           </nav>
         </div>

@@ -109,6 +109,26 @@ export function QuestEditorDialog({
     }
     setSaving(true);
     try {
+      // If user has entered expected output but didn't click +, add it now
+      if (isEdit && quest && newExpectedOutput.trim()) {
+        try {
+          const tc = await createTestCase(quest.id, {
+            expected_output: newExpectedOutput.trim(),
+            is_hidden: newIsHidden,
+          });
+          setTestCases((prev) => [...prev, tc]);
+          setNewExpectedOutput("");
+          setNewIsHidden(false);
+        } catch (e) {
+          toast({
+            title: "Failed to add test case",
+            description: e instanceof Error ? e.message : "Unknown error",
+            variant: "destructive",
+          });
+          setSaving(false);
+          return;
+        }
+      }
       if (isEdit && quest) {
         await updateAdminQuest(quest.id, {
           title: title.trim(),
@@ -305,14 +325,21 @@ export function QuestEditorDialog({
                         </div>
                       ))}
                     </div>
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Add expected output, then click + to add each test case.
+                      </p>
                     <div className="flex gap-2">
                       <Input
                         placeholder="Expected output (e.g. Hello World)"
                         value={newExpectedOutput}
                         onChange={(e) => setNewExpectedOutput(e.target.value)}
-                        onKeyDown={(e) =>
-                          e.key === "Enter" && handleAddTestCase()
-                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddTestCase();
+                          }
+                        }}
                       />
                       <label className="flex items-center gap-2 shrink-0">
                         <Checkbox
@@ -322,12 +349,16 @@ export function QuestEditorDialog({
                         <span className="text-sm">Hidden</span>
                       </label>
                       <Button
+                        type="button"
                         size="sm"
                         onClick={handleAddTestCase}
                         disabled={!newExpectedOutput.trim()}
+                        title="Add test case"
                       >
                         <Plus className="w-4 h-4" />
+                        <span className="sr-only">Add test case</span>
                       </Button>
+                    </div>
                     </div>
                   </>
                 )}

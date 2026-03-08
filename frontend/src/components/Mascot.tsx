@@ -100,14 +100,12 @@ const Mascot: React.FC<MascotProps> = ({
         );
       case 'thinking':
         return (
-          <motion.ellipse
+          <ellipse
             cx="12"
             cy="5"
             rx="3"
             ry="2"
             fill="currentColor"
-            animate={{ rx: [3, 4, 3], ry: [2, 3, 2] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
           />
         );
       default:

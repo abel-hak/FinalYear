@@ -19,7 +19,7 @@ import Mascot from '@/components/Mascot';
 import KnowledgeScroll from '@/components/KnowledgeScroll';
 import ErrorExplanation from '@/components/ErrorExplanation';
 import TimeoutNotification from '@/components/TimeoutNotification';
-import { fetchQuestDetail, submitQuestSolution, requestAiHint } from '@/api/backend';
+import { fetchQuestDetail, submitQuestSolution, requestAiHint, fetchHintRemaining } from '@/api/backend';
 
 // Static hint/concept metadata keyed by backend quest id (or fallback)
 const localQuestMeta: Record<
@@ -97,6 +97,7 @@ const QuestPage: React.FC = () => {
   const [aiHint, setAiHint] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [aiHintsRemaining, setAiHintsRemaining] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,6 +105,8 @@ const QuestPage: React.FC = () => {
       if (!id) return;
       try {
         setLoading(true);
+        setAiHint(null);
+        setAiHintsRemaining(null);
         const quest = await fetchQuestDetail(id);
         if (cancelled) return;
         setTitle(quest.title);
@@ -113,6 +116,8 @@ const QuestPage: React.FC = () => {
         setBackendExplanation(quest.explanation ?? null);
         setBackendExplanationUnlocked(quest.explanation_unlocked);
         setLoadError(null);
+        const { remaining } = await fetchHintRemaining(id);
+        if (!cancelled) setAiHintsRemaining(remaining);
       } catch (e: any) {
         if (!cancelled) {
           setLoadError(e.message ?? 'Failed to load quest');
@@ -226,8 +231,12 @@ const QuestPage: React.FC = () => {
         lastOutput: output || null,
       });
       setAiHint(resp.hint);
+      setAiHintsRemaining(resp.remaining);
     } catch (e: any) {
       setAiError(e.message ?? "AI hint failed");
+      if (e.message?.includes("No hints remaining") || e.message?.includes("limit")) {
+        setAiHintsRemaining(0);
+      }
     } finally {
       setAiLoading(false);
     }
@@ -420,6 +429,7 @@ const QuestPage: React.FC = () => {
                 hints={meta?.hints ?? []}
                 aiHint={aiHint}
                 aiLoading={aiLoading}
+                aiHintsRemaining={aiHintsRemaining}
                 onAskAiHint={handleAskAiHint}
               />
             </div>

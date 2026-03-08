@@ -9,6 +9,7 @@ from app.models.admin import Admin
 from app.models.quest import Quest
 from app.models.test_case import TestCase
 from app.models.submission import Submission
+from app.models.hint_request import HintRequest
 
 __all__ = [
     "Base",
@@ -18,4 +19,5 @@ __all__ = [
     "Quest",
     "TestCase",
     "Submission",
+    "HintRequest",
 ]

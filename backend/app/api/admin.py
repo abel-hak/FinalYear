@@ -316,7 +316,7 @@ async def create_test_case_admin(
         is_hidden=payload.is_hidden,
     )
     db.add(tc)
-    await db.commit()
+    await db.flush()  # Get tc.id before response; get_db will commit
     await db.refresh(tc)
     return tc
 

@@ -43,11 +43,16 @@ async def list_quests(
     )
     quests: list[Quest] = list(result.scalars().all())
 
-    # Resolve learner id explicitly to avoid lazy-loading inside async session
+    # Resolve learner id (create if missing for admins)
     learner_row = await db.execute(
-        select(Learner.id).where(Learner.user_id == current_user.id, Learner.is_deleted.is_(False))
+        select(Learner).where(Learner.user_id == current_user.id, Learner.is_deleted.is_(False))
     )
-    learner_id = learner_row.scalar_one()
+    learner = learner_row.scalar_one_or_none()
+    if not learner:
+        learner = Learner(user_id=current_user.id)
+        db.add(learner)
+        await db.flush()
+    learner_id = learner.id
 
     # Completed quest ids for this learner
     subq = (
@@ -105,11 +110,16 @@ async def get_quest(
     if not quest:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quest not found")
 
-    # Resolve learner id explicitly
+    # Resolve learner id (create if missing for admins)
     learner_row = await db.execute(
-        select(Learner.id).where(Learner.user_id == current_user.id, Learner.is_deleted.is_(False))
+        select(Learner).where(Learner.user_id == current_user.id, Learner.is_deleted.is_(False))
     )
-    learner_id = learner_row.scalar_one()
+    learner = learner_row.scalar_one_or_none()
+    if not learner:
+        learner = Learner(user_id=current_user.id)
+        db.add(learner)
+        await db.flush()
+    learner_id = learner.id
 
     # Has the learner completed this quest?
     sub = await db.execute(
@@ -172,18 +182,23 @@ async def submit_quest(
 
     tests_total = len(test_cases)
     tests_passed = 0
+    stdout = (sandbox_result.stdout or "").rstrip("\n")
     if not sandbox_result.timed_out and sandbox_result.exit_code == 0:
         for tc in test_cases:
-            expected = tc.expected_output
-            if sandbox_result.stdout == expected:
+            expected = (tc.expected_output or "").rstrip("\n")
+            if stdout == expected:
                 tests_passed += 1
     passed = tests_passed == tests_total and tests_total > 0
 
-    # Resolve learner id
+    # Resolve learner id (create if missing, e.g. admin without Learner record)
     learner_row = await db.execute(
         select(Learner).where(Learner.user_id == current_user.id, Learner.is_deleted.is_(False))
     )
-    learner = learner_row.scalar_one()
+    learner = learner_row.scalar_one_or_none()
+    if not learner:
+        learner = Learner(user_id=current_user.id)
+        db.add(learner)
+        await db.flush()
 
     # Check if learner already passed this quest before
     prev_pass = await db.execute(
@@ -212,6 +227,22 @@ async def submit_quest(
         learner.total_points += 10
         if quest.level > learner.current_level:
             learner.current_level = quest.level
+
+    # Update streak (any submission counts as activity)
+    from datetime import datetime, timedelta, timezone
+    today = datetime.now(timezone.utc).date()
+    last = learner.last_activity_date
+    if last is None:
+        learner.streak_days = 1
+        learner.last_activity_date = today
+    elif last == today:
+        pass  # already counted today
+    elif last == today - timedelta(days=1):
+        learner.streak_days += 1
+        learner.last_activity_date = today
+    else:
+        learner.streak_days = 1
+        learner.last_activity_date = today
 
     await db.commit()
 

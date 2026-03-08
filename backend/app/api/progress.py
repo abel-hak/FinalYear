@@ -87,6 +87,7 @@ async def get_progress(
     return ProgressSummary(
         current_level=learner.current_level,
         total_points=learner.total_points,
+        streak_days=learner.streak_days,
         quests=summaries,
     )
 

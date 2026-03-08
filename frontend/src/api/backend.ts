@@ -17,6 +17,7 @@ export interface QuestSummaryDto {
 export interface ProgressSummaryDto {
   current_level: number;
   total_points: number;
+  streak_days?: number;
   quests: QuestSummaryDto[];
 }
 
@@ -54,6 +55,7 @@ export interface AdminQuestDto {
 
 export interface AiHintResponseDto {
   hint: string;
+  remaining: number;
 }
 
 export interface AdminStatsDto {
@@ -212,6 +214,29 @@ export async function fetchProgress(): Promise<ProgressSummaryDto> {
     throw new Error(`Failed to load progress: ${res.status}`);
   }
   return (await res.json()) as ProgressSummaryDto;
+}
+
+export interface LeaderboardEntryDto {
+  rank: number;
+  username: string;
+  total_points: number;
+  streak_days: number;
+  quests_completed: number;
+}
+
+export async function fetchLeaderboard(limit?: number): Promise<LeaderboardEntryDto[]> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const url = limit ? `${API_BASE}/api/v1/leaderboard?limit=${limit}` : `${API_BASE}/api/v1/leaderboard`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) {
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    throw new Error(`Failed to load leaderboard: ${res.status}`);
+  }
+  return (await res.json()) as LeaderboardEntryDto[];
 }
 
 export async function fetchQuestDetail(questId: string): Promise<QuestDetailDto> {
@@ -439,6 +464,16 @@ export async function createAdminQuest(payload: {
     throw new Error(body.detail || `Failed to create quest (${res.status})`);
   }
   return (await res.json()) as AdminQuestDto;
+}
+
+export async function fetchHintRemaining(questId: string): Promise<{ remaining: number }> {
+  const token = getToken();
+  if (!token) return { remaining: 3 };
+  const res = await fetch(`${API_BASE}/api/v1/hints/remaining?quest_id=${encodeURIComponent(questId)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return { remaining: 3 };
+  return (await res.json()) as { remaining: number };
 }
 
 export async function requestAiHint(params: {

@@ -9,4 +9,5 @@ class AiHintRequest(BaseModel):
 
 class AiHintResponse(BaseModel):
   hint: str
+  remaining: int  # AI hints left for this quest (0 = none left)
 

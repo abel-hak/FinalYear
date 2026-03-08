@@ -1,10 +1,10 @@
 """
-Learner model - extends User with learning progress (level, points).
+Learner model - extends User with learning progress (level, points, streak).
 Per documentation: learner_id, user_id (FK), current_level, total_points.
 """
 import uuid
-from datetime import datetime
-from sqlalchemy import Integer, DateTime, Boolean, ForeignKey
+from datetime import date, datetime
+from sqlalchemy import Integer, DateTime, Boolean, Date, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,7 +13,7 @@ from app.db.base import Base
 
 class Learner(Base):
     """
-    Learner profile: 1:1 with User. Tracks current_level and total_points.
+    Learner profile: 1:1 with User. Tracks current_level, total_points, and streak.
     """
     __tablename__ = "learners"
 
@@ -30,6 +30,8 @@ class Learner(Base):
     )
     current_level: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     total_points: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    streak_days: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_activity_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)

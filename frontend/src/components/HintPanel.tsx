@@ -13,11 +13,12 @@ interface HintPanelProps {
   hints: string[];
   aiHint?: string | null;
   aiLoading?: boolean;
+  aiHintsRemaining?: number | null; // null = unknown/unlimited
   onAskAiHint?: () => void;
   className?: string;
 }
 
-const HintPanel: React.FC<HintPanelProps> = ({ hints, aiHint, aiLoading, onAskAiHint, className }) => {
+const HintPanel: React.FC<HintPanelProps> = ({ hints, aiHint, aiLoading, aiHintsRemaining, onAskAiHint, className }) => {
   const [revealedHints, setRevealedHints] = useState<number[]>([]);
   
   const revealNextHint = () => {
@@ -28,7 +29,9 @@ const HintPanel: React.FC<HintPanelProps> = ({ hints, aiHint, aiLoading, onAskAi
   };
   
   const hasMoreHints = revealedHints.length < hints.length;
-  const hintsRemaining = hints.length - revealedHints.length;
+  const staticHintsRemaining = hints.length - revealedHints.length;
+  const hasStaticHints = hints.length > 0;
+  const canRequestAiHint = onAskAiHint && (aiHintsRemaining === null || aiHintsRemaining === undefined || aiHintsRemaining > 0);
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -38,7 +41,13 @@ const HintPanel: React.FC<HintPanelProps> = ({ hints, aiHint, aiLoading, onAskAi
           <h3 className="font-semibold text-foreground">Hints</h3>
         </div>
         <span className="text-xs text-muted-foreground">
-          {hintsRemaining} hint{hintsRemaining !== 1 ? 's' : ''} remaining
+          {hasStaticHints
+            ? `${staticHintsRemaining} static hint${staticHintsRemaining !== 1 ? 's' : ''} remaining`
+            : aiHintsRemaining != null
+              ? `${aiHintsRemaining} AI hint${aiHintsRemaining !== 1 ? 's' : ''} remaining`
+              : onAskAiHint
+                ? 'AI hints available'
+                : ''}
         </span>
       </div>
       
@@ -93,12 +102,16 @@ const HintPanel: React.FC<HintPanelProps> = ({ hints, aiHint, aiLoading, onAskAi
           <Button
             variant="ghost"
             size="sm"
-            disabled={aiLoading}
+            disabled={aiLoading || !canRequestAiHint}
             onClick={onAskAiHint}
             className="w-full justify-center text-xs text-muted-foreground hover:text-primary"
           >
             <Sparkles className="w-3 h-3 mr-1" />
-            {aiLoading ? "Asking AI..." : "Ask AI for a hint"}
+            {aiLoading
+              ? "Asking AI..."
+              : !canRequestAiHint
+                ? "No AI hints remaining"
+                : "Ask AI for a hint"}
           </Button>
         </div>
       )}

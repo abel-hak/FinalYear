@@ -10,6 +10,7 @@ import Achievements from "./pages/Achievements";
 import Prototype from "./pages/Prototype";
 import FAQ from "./pages/FAQ";
 import AdminDashboard from "./pages/AdminDashboard";
+import Leaderboard from "./pages/Leaderboard";
 import StyleGuide from "./pages/StyleGuide";
 import AccessControlSecurity from "./pages/AccessControlSecurity";
 import PresentationPractice from "./pages/PresentationPractice";
@@ -41,6 +42,10 @@ const App = () => (
           <Route
             path="/achievements"
             element={getToken() ? <Achievements /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/leaderboard"
+            element={getToken() ? <Leaderboard /> : <Navigate to="/login" replace />}
           />
           <Route
             path="/admin"
