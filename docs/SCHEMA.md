@@ -12,6 +12,8 @@ Entity summary and indexes. Matches the project documentation (User, Learner, Ad
 | **quests** | One challenge: title, description, level, order_rank, initial_code, solution_code, explanation. |
 | **test_cases** | N:1 with Quest; input_data (JSONB), expected_output, is_hidden. |
 | **submissions** | One attempt: learner_id, quest_id, code, passed, output_log, created_at. |
+| **learning_paths** | Curated sequence: title, description, level (1–3), order_rank. |
+| **learning_path_quests** | Junction: path_id, quest_id, order_rank. |
 
 ## Relationships
 
@@ -21,6 +23,8 @@ Entity summary and indexes. Matches the project documentation (User, Learner, Ad
 - **Quest** → TestCases (many), Submissions (many)
 - **TestCase** → Quest (1)
 - **Submission** → Learner (1), Quest (1)
+- **LearningPath** → LearningPathQuest (many)
+- **LearningPathQuest** → LearningPath (1), Quest (1)
 
 ## Indexes
 

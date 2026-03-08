@@ -4,7 +4,7 @@ import HeroSection from '@/components/HeroSection';
 import QuestCard, { Quest } from '@/components/QuestCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Trophy, Zap, BookOpen, RefreshCw } from 'lucide-react';
+import { ArrowRight, Trophy, Zap, BookOpen, RefreshCw, BookMarked } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Mascot from '@/components/Mascot';
 import OnboardingTutorial from '@/components/OnboardingTutorial';
@@ -120,12 +120,20 @@ const Index = () => {
                 Start Your Journey
               </h2>
             </div>
-            <Link to="/quests" className="mt-4 md:mt-0">
-              <Button variant="outline" className="group">
-                View All Quests
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
+            <div className="flex gap-2 mt-4 md:mt-0">
+              <Link to="/quests">
+                <Button variant="outline" className="group">
+                  View All Quests
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+              <Link to="/learning-paths">
+                <Button variant="ghost" className="group">
+                  <BookMarked className="w-4 h-4 mr-2" />
+                  Learning Paths
+                </Button>
+              </Link>
+            </div>
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -272,11 +280,6 @@ const Index = () => {
             <Link to="/quests">
               <Button variant="hero" size="xl">
                 Start Learning Now
-              </Button>
-            </Link>
-            <Link to="/prototype">
-              <Button variant="outline" size="xl">
-                View Prototype Demo
               </Button>
             </Link>
           </div>

@@ -12,6 +12,7 @@ from app.api import progress as progress_routes
 from app.api import admin as admin_routes
 from app.api import hints as hints_routes
 from app.api import leaderboard as leaderboard_routes
+from app.api import learning_paths as learning_paths_routes
 
 app = FastAPI(
     title="CodeQuest API",
@@ -40,6 +41,7 @@ app.include_router(progress_routes.router, prefix=api_prefix)
 app.include_router(admin_routes.router, prefix=api_prefix)
 app.include_router(hints_routes.router, prefix=api_prefix)
 app.include_router(leaderboard_routes.router, prefix=api_prefix)
+app.include_router(learning_paths_routes.router, prefix=api_prefix)
 
 
 @app.get("/health")

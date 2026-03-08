@@ -23,6 +23,34 @@ export interface ProgressSummaryDto {
   quests: QuestSummaryDto[];
 }
 
+export interface LearningPathSummaryDto {
+  id: string;
+  title: string;
+  description: string;
+  level: number;
+  order_rank: number;
+  quest_count: number;
+}
+
+export interface LearningPathQuestItemDto {
+  id: string;
+  title: string;
+  description: string;
+  level: number;
+  order_rank: number;
+  status: "completed" | "current" | "locked";
+  tags?: string[];
+}
+
+export interface LearningPathDetailDto {
+  id: string;
+  title: string;
+  description: string;
+  level: number;
+  order_rank: number;
+  quests: LearningPathQuestItemDto[];
+}
+
 export interface ReviewSuggestionDto {
   id: string;
   title: string;
@@ -244,6 +272,28 @@ export async function fetchProgress(): Promise<ProgressSummaryDto> {
     throw new Error(`Failed to load progress: ${res.status}`);
   }
   return (await res.json()) as ProgressSummaryDto;
+}
+
+export async function fetchLearningPaths(): Promise<LearningPathSummaryDto[]> {
+  const res = await fetch(`${API_BASE}/api/v1/learning-paths`);
+  if (!res.ok) return [];
+  return (await res.json()) as LearningPathSummaryDto[];
+}
+
+export async function fetchLearningPathDetail(pathId: string): Promise<LearningPathDetailDto> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(`${API_BASE}/api/v1/learning-paths/${pathId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    throw new Error(`Failed to load path: ${res.status}`);
+  }
+  return (await res.json()) as LearningPathDetailDto;
 }
 
 export async function fetchReviewSuggestions(): Promise<ReviewSuggestionDto[]> {

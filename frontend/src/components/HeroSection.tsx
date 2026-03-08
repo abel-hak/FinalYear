@@ -48,11 +48,6 @@ const HeroSection: React.FC = () => {
                 Start Your Quest
               </Button>
             </Link>
-            <Link to="/prototype">
-              <Button variant="glass" size="xl">
-                View Prototype
-              </Button>
-            </Link>
           </div>
           
           {/* Feature pills */}

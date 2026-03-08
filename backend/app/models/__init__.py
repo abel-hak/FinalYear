@@ -10,6 +10,7 @@ from app.models.quest import Quest
 from app.models.test_case import TestCase
 from app.models.submission import Submission
 from app.models.hint_request import HintRequest
+from app.models.learning_path import LearningPath, LearningPathQuest
 
 __all__ = [
     "Base",
@@ -20,4 +21,6 @@ __all__ = [
     "TestCase",
     "Submission",
     "HintRequest",
+    "LearningPath",
+    "LearningPathQuest",
 ]

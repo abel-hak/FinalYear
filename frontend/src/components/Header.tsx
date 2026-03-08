@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Code2, Map, Trophy, User, Sparkles, Menu, X, HelpCircle, Shield, LayoutDashboard, Flame, Sun, Moon } from 'lucide-react';
+import { Code2, Map, Trophy, User, Sparkles, Menu, X, HelpCircle, LayoutDashboard, Flame, Sun, Moon, BookOpen } from 'lucide-react';
 import ProgressBar from './ProgressBar';
 import { fetchProgress, getToken, getRole, clearAuth } from '@/api/backend';
 import {
@@ -67,10 +67,10 @@ const Header: React.FC = () => {
     { to: '/', label: 'Home', icon: Code2 },
     ...(role === 'admin' ? [{ to: '/admin', label: 'Admin', icon: LayoutDashboard }] : []),
     { to: '/quests', label: 'Quests', icon: Map },
+    { to: '/learning-paths', label: 'Paths', icon: BookOpen },
     { to: '/achievements', label: 'Achievements', icon: Trophy },
     { to: '/leaderboard', label: 'Leaderboard', icon: Flame },
     { to: '/faq', label: 'Help', icon: HelpCircle },
-    { to: '/access-control-security', label: 'Docs', icon: Shield },
   ];
 
   return (

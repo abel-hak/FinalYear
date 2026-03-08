@@ -29,11 +29,11 @@ def reset_and_seed() -> None:
     database_url = seed.database_url
     engine = create_engine(database_url)
 
-    print("Resetting tables (submissions, test_cases, quests, learners, admins, users)...")
+    print("Resetting tables (learning_path_quests, learning_paths, submissions, test_cases, quests, learners, admins, users)...")
     with engine.begin() as conn:
         conn.execute(
             text(
-                "TRUNCATE submissions, test_cases, quests, learners, admins, users "
+                "TRUNCATE learning_path_quests, learning_paths, submissions, test_cases, quests, learners, admins, users "
                 "RESTART IDENTITY CASCADE;"
             )
         )

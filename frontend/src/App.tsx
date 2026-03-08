@@ -7,13 +7,11 @@ import Index from "./pages/Index";
 import Quests from "./pages/Quests";
 import QuestPage from "./pages/QuestPage";
 import Achievements from "./pages/Achievements";
-import Prototype from "./pages/Prototype";
 import FAQ from "./pages/FAQ";
 import AdminDashboard from "./pages/AdminDashboard";
 import Leaderboard from "./pages/Leaderboard";
-import StyleGuide from "./pages/StyleGuide";
-import AccessControlSecurity from "./pages/AccessControlSecurity";
-import PresentationPractice from "./pages/PresentationPractice";
+import LearningPaths from "./pages/LearningPaths";
+import LearningPathDetail from "./pages/LearningPathDetail";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -49,15 +47,16 @@ const App = () => (
             path="/leaderboard"
             element={getToken() ? <Leaderboard /> : <Navigate to="/login" replace />}
           />
+          <Route path="/learning-paths" element={<LearningPaths />} />
+          <Route
+            path="/learning-paths/:id"
+            element={getToken() ? <LearningPathDetail /> : <Navigate to="/login" replace />}
+          />
           <Route
             path="/admin"
             element={getToken() ? <AdminDashboard /> : <Navigate to="/login" replace />}
           />
-          <Route path="/prototype" element={<Prototype />} />
           <Route path="/faq" element={<FAQ />} />
-          <Route path="/style-guide" element={<StyleGuide />} />
-          <Route path="/access-control-security" element={<AccessControlSecurity />} />
-          <Route path="/presentation-practice" element={<PresentationPractice />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

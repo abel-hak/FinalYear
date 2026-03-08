@@ -53,3 +53,7 @@ class Quest(Base):
         "Submission",
         back_populates="quest",
     )
+    learning_path_quests: Mapped[list["LearningPathQuest"]] = relationship(
+        "LearningPathQuest",
+        back_populates="quest",
+    )
