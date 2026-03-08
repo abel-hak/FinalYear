@@ -8,6 +8,7 @@ import { ArrowRight, Trophy, Zap, BookOpen } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Mascot from '@/components/Mascot';
 import OnboardingTutorial from '@/components/OnboardingTutorial';
+import DailyActivityBanner from '@/components/DailyActivityBanner';
 import { fetchProgress } from '@/api/backend';
 
 const Index = () => {
@@ -16,6 +17,8 @@ const Index = () => {
   const [featuredQuests, setFeaturedQuests] = useState<Quest[]>([]);
   const [completedCount, setCompletedCount] = useState(0);
   const [totalXP, setTotalXP] = useState(0);
+  const [lastActivityDate, setLastActivityDate] = useState<string | null | undefined>(undefined);
+  const [dismissedBanner, setDismissedBanner] = useState(false);
 
   useEffect(() => {
     const seen = localStorage.getItem('codequest-onboarding-complete');
@@ -31,6 +34,7 @@ const Index = () => {
       try {
         const progress = await fetchProgress();
         setTotalXP(progress.total_points);
+        setLastActivityDate(progress.last_activity_date ?? null);
         const completed = progress.quests.filter((q) => q.status === 'completed').length;
         setCompletedCount(completed);
         const mapped: Quest[] = progress.quests.slice(0, 3).map((q) => {
@@ -55,7 +59,7 @@ const Index = () => {
         });
         setFeaturedQuests(mapped);
       } catch {
-        // if not logged in or fails, keep defaults (no featured quests)
+        // if not logged in or fails, keep defaults (no featured quests, no banner)
       }
     }
     load();
@@ -89,6 +93,16 @@ const Index = () => {
       
       {/* Hero Section */}
       <HeroSection />
+
+      {/* Daily activity reminder (US-013) - only when logged in and haven't practiced today */}
+      {!dismissedBanner && lastActivityDate !== undefined && (
+        <div className="container py-4">
+          <DailyActivityBanner
+            lastActivityDate={lastActivityDate}
+            onDismiss={() => setDismissedBanner(true)}
+          />
+        </div>
+      )}
       
       {/* Featured Quests Section */}
       <section className="py-20 relative">

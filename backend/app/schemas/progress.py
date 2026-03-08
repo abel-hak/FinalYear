@@ -11,5 +11,6 @@ class ProgressSummary(BaseModel):
     current_level: int
     total_points: int
     streak_days: int = 0
+    last_activity_date: str | None = None  # YYYY-MM-DD, for daily notification (US-013)
     quests: List[QuestSummary]
 

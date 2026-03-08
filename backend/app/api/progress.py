@@ -84,10 +84,13 @@ async def get_progress(
             )
         )
 
+    last_activity = learner.last_activity_date.isoformat() if learner.last_activity_date else None
+
     return ProgressSummary(
         current_level=learner.current_level,
         total_points=learner.total_points,
         streak_days=learner.streak_days,
+        last_activity_date=last_activity,
         quests=summaries,
     )
 

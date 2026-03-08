@@ -18,6 +18,7 @@ export interface ProgressSummaryDto {
   current_level: number;
   total_points: number;
   streak_days?: number;
+  last_activity_date?: string | null;  // YYYY-MM-DD (US-013)
   quests: QuestSummaryDto[];
 }
 

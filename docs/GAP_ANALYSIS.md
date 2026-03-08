@@ -77,13 +77,11 @@ This document compares the implemented system against the requirements in **Fina
 
 ---
 
-### 6. **US-013 – Daily activity notifications**
+### 6. **US-013 – Daily activity notifications** ✅
 
 **Document:** *"As a Learner, I want to be able to receive notification to do my daily activities."*
 
-**Status:** Not implemented. No email, in-app, or push notifications for daily reminders.
-
-**Action:** Implement notification mechanism (e.g. in-app banner when user hasn’t logged in today, or optional email reminders). Can be minimal (e.g. "You haven’t practiced today!") for MVP.
+**Status:** Implemented. In-app banner on dashboard and quests pages when learner hasn't practiced today. Banner: "You haven’t practiced today!".
 
 ---
 

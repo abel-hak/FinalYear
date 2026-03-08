@@ -3,6 +3,7 @@ import Header from '@/components/Header';
 import QuestCard, { Quest } from '@/components/QuestCard';
 import { Button } from '@/components/ui/button';
 import ProgressBar from '@/components/ProgressBar';
+import DailyActivityBanner from '@/components/DailyActivityBanner';
 import { Filter, Sparkles, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { fetchProgress } from '@/api/backend';
@@ -12,6 +13,8 @@ const Quests: React.FC = () => {
   const [quests, setQuests] = React.useState<Quest[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [lastActivityDate, setLastActivityDate] = React.useState<string | null | undefined>(undefined);
+  const [dismissedBanner, setDismissedBanner] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -43,6 +46,7 @@ const Quests: React.FC = () => {
           };
         });
         setQuests(mapped);
+        setLastActivityDate(progress.last_activity_date ?? null);
         setError(null);
       } catch (e: any) {
         if (!cancelled) {
@@ -71,6 +75,16 @@ const Quests: React.FC = () => {
       <Header />
       
       <main className="container py-8">
+        {/* Daily activity reminder (US-013) */}
+        {!dismissedBanner && lastActivityDate !== undefined && (
+          <div className="mb-6">
+            <DailyActivityBanner
+              lastActivityDate={lastActivityDate}
+              onDismiss={() => setDismissedBanner(true)}
+            />
+          </div>
+        )}
+
         {/* Page Header */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
           <div>
