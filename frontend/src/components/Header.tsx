@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Code2, Map, Trophy, User, Sparkles, Menu, X, HelpCircle, Shield, LayoutDashboard, Flame } from 'lucide-react';
+import { Code2, Map, Trophy, User, Sparkles, Menu, X, HelpCircle, Shield, LayoutDashboard, Flame, Sun, Moon } from 'lucide-react';
 import ProgressBar from './ProgressBar';
 import { fetchProgress, getToken, getRole, clearAuth } from '@/api/backend';
 import {
@@ -14,8 +14,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const Header: React.FC = () => {
+  const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userXP, setUserXP] = useState(0);
   const [userLevel, setUserLevel] = useState(0);
@@ -125,6 +127,11 @@ const Header: React.FC = () => {
             )}
           </div>
 
+          {/* Theme toggle */}
+          <Button variant="ghost" size="icon" onClick={toggleTheme} title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}>
+            {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </Button>
+
           {/* User Avatar / Profile menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -184,6 +191,14 @@ const Header: React.FC = () => {
               );
             })}
             
+            {/* Mobile: Theme toggle */}
+            <div className="pt-2">
+              <Button variant="outline" size="sm" onClick={toggleTheme} className="w-full justify-start gap-2">
+                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {theme === "dark" ? "Light mode" : "Dark mode"}
+              </Button>
+            </div>
+
             {/* Mobile XP */}
             <div className="pt-4 border-t border-border flex items-center gap-3 flex-wrap">
               <Badge variant="gold" className="flex items-center gap-1">

@@ -242,10 +242,18 @@ export interface LeaderboardEntryDto {
   quests_completed: number;
 }
 
-export async function fetchLeaderboard(limit?: number): Promise<LeaderboardEntryDto[]> {
+export type LeaderboardPeriod = "all" | "weekly" | "monthly";
+
+export async function fetchLeaderboard(
+  limit?: number,
+  period?: LeaderboardPeriod
+): Promise<LeaderboardEntryDto[]> {
   const token = getToken();
   if (!token) throw new Error("Not authenticated");
-  const url = limit ? `${API_BASE}/api/v1/leaderboard?limit=${limit}` : `${API_BASE}/api/v1/leaderboard`;
+  const params = new URLSearchParams();
+  if (limit) params.set("limit", String(limit));
+  if (period && period !== "all") params.set("period", period);
+  const url = `${API_BASE}/api/v1/leaderboard${params.toString() ? `?${params}` : ""}`;
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
   if (!res.ok) {
     if (res.status === 401) {

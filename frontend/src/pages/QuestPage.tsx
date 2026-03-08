@@ -334,6 +334,7 @@ const QuestPage: React.FC = () => {
             <CodeEditor
               code={code}
               onChange={setCode}
+              onRun={handleRun}
               errorLine={feedback === 'error' && meta ? meta.errorLine : undefined}
             />
             

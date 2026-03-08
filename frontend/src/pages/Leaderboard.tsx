@@ -2,8 +2,9 @@ import React, { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Flame, Trophy, Sparkles, Loader2 } from "lucide-react";
-import { fetchLeaderboard, type LeaderboardEntryDto } from "@/api/backend";
+import { Button } from "@/components/ui/button";
+import { Flame, Trophy, Sparkles, Loader2, Calendar } from "lucide-react";
+import { fetchLeaderboard, type LeaderboardEntryDto, type LeaderboardPeriod } from "@/api/backend";
 
 const rankMedals: Record<number, string> = {
   1: "🥇",
@@ -11,14 +12,22 @@ const rankMedals: Record<number, string> = {
   3: "🥉",
 };
 
+const periodLabels: Record<LeaderboardPeriod, string> = {
+  all: "All Time",
+  weekly: "This Week",
+  monthly: "This Month",
+};
+
 const Leaderboard: React.FC = () => {
   const [entries, setEntries] = useState<LeaderboardEntryDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [period, setPeriod] = useState<LeaderboardPeriod>("all");
 
   useEffect(() => {
     let cancelled = false;
-    fetchLeaderboard(20)
+    setLoading(true);
+    fetchLeaderboard(20, period)
       .then((data) => {
         if (!cancelled) setEntries(data);
       })
@@ -31,7 +40,14 @@ const Leaderboard: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [period]);
+
+  const periodSubtitle =
+    period === "all"
+      ? "Top learners by total XP"
+      : period === "weekly"
+      ? "Most XP earned in the last 7 days"
+      : "Most XP earned in the last 30 days";
 
   return (
     <div className="min-h-screen bg-background">
@@ -41,9 +57,23 @@ const Leaderboard: React.FC = () => {
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">
             Leaderboard
           </h1>
-          <p className="text-muted-foreground">
-            Top learners by XP. Complete quests and build your streak to climb the ranks!
+          <p className="text-muted-foreground mb-4">
+            {periodSubtitle}. Complete quests and build your streak to climb the ranks!
           </p>
+          <div className="flex flex-wrap gap-2">
+            {(["all", "weekly", "monthly"] as const).map((p) => (
+              <Button
+                key={p}
+                variant={period === p ? "default" : "outline"}
+                size="sm"
+                onClick={() => setPeriod(p)}
+                className="gap-2"
+              >
+                <Calendar className="w-4 h-4" />
+                {periodLabels[p]}
+              </Button>
+            ))}
+          </div>
         </div>
 
         {loading ? (

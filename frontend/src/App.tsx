@@ -18,10 +18,12 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import { getToken } from "./api/backend";
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
+  <ThemeProvider>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
@@ -62,6 +64,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;
