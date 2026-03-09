@@ -19,6 +19,13 @@ class SubmissionRequest(BaseModel):
     code: str = Field(..., description="Python code submitted for this quest")
 
 
+class TestCaseResult(BaseModel):
+    test_case_id: UUID4
+    passed: bool
+    expected_output: str | None = None  # None for hidden test cases
+    is_hidden: bool = False
+
+
 class SubmissionResult(BaseModel):
     quest_id: UUID4
     passed: bool
@@ -26,4 +33,6 @@ class SubmissionResult(BaseModel):
     tests_total: int
     stdout: str
     stderr: str
+    actual_output: str
+    test_results: list[TestCaseResult] = []
 

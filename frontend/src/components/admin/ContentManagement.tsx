@@ -33,7 +33,9 @@ import {
   createAdminQuest,
   updateAdminQuest,
   deleteAdminQuest,
+  fetchQuestQualityReport,
   type AdminQuestDto,
+  type QuestQualityReportDto,
 } from "@/api/backend";
 import { QuestEditorDialog } from "./QuestEditorDialog";
 import { useToast } from "@/components/ui/use-toast";
@@ -58,6 +60,8 @@ export const ContentManagement = () => {
   const { toast } = useToast();
   const [quests, setQuests] = useState<AdminQuestDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [qualityLoading, setQualityLoading] = useState(false);
+  const [quality, setQuality] = useState<QuestQualityReportDto | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingQuest, setEditingQuest] = useState<AdminQuestDto | null>(null);
@@ -96,6 +100,26 @@ export const ContentManagement = () => {
   const handleCreate = () => {
     setEditingQuest(null);
     setEditorOpen(true);
+  };
+
+  const handleRunQuality = async () => {
+    setQualityLoading(true);
+    try {
+      const report = await fetchQuestQualityReport();
+      setQuality(report);
+      toast({
+        title: "Quality check complete",
+        description: `${report.quests_with_issues} quest(s) need attention.`,
+      });
+    } catch (e) {
+      toast({
+        title: "Quality check failed",
+        description: e instanceof Error ? e.message : "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setQualityLoading(false);
+    }
   };
 
   const handleEdit = (quest: AdminQuestDto) => {
@@ -155,6 +179,59 @@ export const ContentManagement = () => {
 
   return (
     <div className="space-y-6">
+      {quality && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="font-semibold">Content quality</div>
+                <div className="text-sm text-muted-foreground">
+                  {quality.quests_with_issues} of {quality.total_quests} quests have issues.
+                </div>
+              </div>
+              <Button variant="outline" onClick={handleRunQuality} disabled={qualityLoading} className="gap-2">
+                {qualityLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Re-run check
+              </Button>
+            </div>
+
+            {quality.items.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {quality.items.slice(0, 10).map((item) => (
+                  <div key={item.quest_id} className="p-3 rounded-lg border border-border bg-secondary/20">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">
+                          #{item.order_rank} {item.title}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {item.issues.join(" • ")}
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          const q = quests.find((qq) => qq.id === item.quest_id);
+                          if (q) handleEdit(q);
+                        }}
+                      >
+                        Fix
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {quality.items.length > 10 && (
+                  <div className="text-xs text-muted-foreground">
+                    Showing 10 of {quality.items.length}. Fix some issues and re-run.
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -165,10 +242,16 @@ export const ContentManagement = () => {
             className="pl-10"
           />
         </div>
-        <Button className="gap-2" onClick={handleCreate}>
-          <Plus className="w-4 h-4" />
-          Add Quest
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="gap-2" onClick={handleRunQuality} disabled={qualityLoading}>
+            {qualityLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            Quality Check
+          </Button>
+          <Button className="gap-2" onClick={handleCreate}>
+            <Plus className="w-4 h-4" />
+            Add Quest
+          </Button>
+        </div>
       </div>
 
       {loading ? (

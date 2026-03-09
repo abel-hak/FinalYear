@@ -11,14 +11,15 @@ interface Hint {
 
 interface HintPanelProps {
   hints: string[];
-  aiHint?: string | null;
+  aiHints?: { number: number; text: string }[];
   aiLoading?: boolean;
   aiHintsRemaining?: number | null; // null = unknown/unlimited
+  aiHintLimit?: number | null;
   onAskAiHint?: () => void;
   className?: string;
 }
 
-const HintPanel: React.FC<HintPanelProps> = ({ hints, aiHint, aiLoading, aiHintsRemaining, onAskAiHint, className }) => {
+const HintPanel: React.FC<HintPanelProps> = ({ hints, aiHints, aiLoading, aiHintsRemaining, aiHintLimit, onAskAiHint, className }) => {
   const [revealedHints, setRevealedHints] = useState<number[]>([]);
   
   const revealNextHint = () => {
@@ -90,13 +91,19 @@ const HintPanel: React.FC<HintPanelProps> = ({ hints, aiHint, aiLoading, aiHints
       {/* AI hint */}
       {onAskAiHint && (
         <div className="pt-2 border-t border-border/60 space-y-2">
-          {aiHint && (
-            <div className="hint-card bg-primary/5 border border-primary/40 p-3 rounded-md text-sm text-foreground">
-              <div className="flex items-center gap-2 mb-1 text-primary-foreground">
-                <Sparkles className="w-4 h-4" />
-                <span className="font-semibold text-xs uppercase tracking-wide">AI hint</span>
-              </div>
-              <p className="text-sm text-foreground">{aiHint}</p>
+          {aiHints && aiHints.length > 0 && (
+            <div className="space-y-2">
+              {aiHints.map((h) => (
+                <div key={h.number} className="hint-card bg-primary/5 border border-primary/40 p-3 rounded-md text-sm text-foreground">
+                  <div className="flex items-center gap-2 mb-1 text-primary-foreground">
+                    <Sparkles className="w-4 h-4" />
+                    <span className="font-semibold text-xs uppercase tracking-wide">
+                      AI hint {h.number}{aiHintLimit ? `/${aiHintLimit}` : ""}
+                    </span>
+                  </div>
+                  <p className="text-sm text-foreground">{h.text}</p>
+                </div>
+              ))}
             </div>
           )}
           <Button

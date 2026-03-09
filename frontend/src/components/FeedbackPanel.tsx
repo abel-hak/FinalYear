@@ -9,6 +9,8 @@ interface FeedbackPanelProps {
   title: string;
   message: string;
   output?: string;
+  expectedOutput?: string | null;
+  actualOutput?: string | null;
   className?: string;
 }
 
@@ -17,6 +19,8 @@ const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
   title,
   message,
   output,
+  expectedOutput,
+  actualOutput,
   className
 }) => {
   const icons = {
@@ -39,6 +43,27 @@ const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
           <h4 className="font-semibold text-foreground mb-1">{title}</h4>
           <p className="text-sm text-muted-foreground">{message}</p>
           
+          {(expectedOutput != null || actualOutput != null) && (
+            <div className="mt-3 grid sm:grid-cols-2 gap-3">
+              {expectedOutput != null && (
+                <div className="p-3 rounded-lg bg-code-bg border border-border">
+                  <div className="text-xs text-muted-foreground font-mono mb-2">Expected</div>
+                  <pre className="font-mono text-sm text-foreground whitespace-pre-wrap">
+                    {expectedOutput}
+                  </pre>
+                </div>
+              )}
+              {actualOutput != null && (
+                <div className="p-3 rounded-lg bg-code-bg border border-border">
+                  <div className="text-xs text-muted-foreground font-mono mb-2">Your output</div>
+                  <pre className="font-mono text-sm text-foreground whitespace-pre-wrap">
+                    {actualOutput}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
+
           {output && (
             <div className="mt-3 p-3 rounded-lg bg-code-bg border border-border">
               <div className="flex items-center gap-2 mb-2">

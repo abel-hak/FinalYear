@@ -86,6 +86,13 @@ export interface SubmissionResultDto {
   tests_total: number;
   stdout: string;
   stderr: string;
+  actual_output: string;
+  test_results: {
+    test_case_id: string;
+    passed: boolean;
+    expected_output?: string | null;
+    is_hidden: boolean;
+  }[];
 }
 
 export interface AdminQuestDto {
@@ -100,9 +107,24 @@ export interface AdminQuestDto {
   is_deleted: boolean;
 }
 
+export interface QuestQualityIssueDto {
+  quest_id: string;
+  order_rank: number;
+  title: string;
+  issues: string[];
+}
+
+export interface QuestQualityReportDto {
+  total_quests: number;
+  quests_with_issues: number;
+  items: QuestQualityIssueDto[];
+}
+
 export interface AiHintResponseDto {
   hint: string;
   remaining: number;
+  hint_number: number;
+  limit: number;
 }
 
 export type AchievementRarity = "common" | "rare" | "epic" | "legendary";
@@ -461,6 +483,25 @@ export async function fetchAdminQuests(): Promise<AdminQuestDto[]> {
     throw new Error(`Failed to load admin quests: ${res.status}`);
   }
   return (await res.json()) as AdminQuestDto[];
+}
+
+export async function fetchQuestQualityReport(): Promise<QuestQualityReportDto> {
+  const token = getToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+  const res = await fetch(`${API_BASE}/api/v1/admin/quests/quality`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    throw new Error(body.detail || `Failed to load quality report (${res.status})`);
+  }
+  return (await res.json()) as QuestQualityReportDto;
 }
 
 export async function updateAdminQuest(

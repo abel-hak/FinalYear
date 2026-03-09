@@ -100,6 +100,20 @@ class TestCaseAdmin(BaseModel):
         from_attributes = True
 
 
+# --- Content quality checks ---
+class QuestQualityIssue(BaseModel):
+    quest_id: UUID4
+    order_rank: int
+    title: str
+    issues: List[str]
+
+
+class QuestQualityReport(BaseModel):
+    total_quests: int
+    quests_with_issues: int
+    items: List[QuestQualityIssue]
+
+
 # Learning path admin schemas
 class LearningPathCreate(BaseModel):
     title: str

@@ -56,6 +56,7 @@ async def generate_hint(
     quest_description: str,
     learner_code: str,
     last_output: str | None,
+    hint_number: int | None = None,
 ) -> str:
     """
     Call the configured AI model to generate a short, instructional hint.
@@ -71,12 +72,15 @@ async def generate_hint(
     if _circuit_open():
         raise RuntimeError("AI hints are temporarily unavailable. Please try again in a few moments.")
 
+    stage = int(hint_number or 1)
     key = _cache_key(
         quest_title=quest_title,
         quest_description=quest_description,
         learner_code=learner_code,
         last_output=last_output,
     )
+    # Stage-specific cache key so Hint #2 isn't reused as Hint #1, etc.
+    key = f"{stage}:{key}"
     cached = _AI_HINT_CACHE.get(key)
     if cached:
         expires_at, hint = cached
@@ -84,12 +88,27 @@ async def generate_hint(
             return hint
         _AI_HINT_CACHE.pop(key, None)
 
+    stage_instructions = {
+        1: (
+            "Give a general hint. Describe what concept to check (e.g. variable assignment order, loop condition, key lookup)."
+        ),
+        2: (
+            "Be more specific. Point to the most likely area (a line or expression) and what to change (but do NOT provide the final code)."
+        ),
+        3: (
+            "Be very specific. Identify the exact bug pattern and the minimal fix direction (still do NOT provide the full fixed code)."
+        ),
+    }
+
     system_prompt = (
         "You are a gentle debugging tutor for beginner programmers.\n"
         "Given a quest description, the learner's current Python code, and the output/error, "
-        "provide ONE short hint (2-3 sentences) that nudges them toward the fix without giving "
-        "away the full solution or rewriting the entire code.\n"
-        "Focus on explaining what to look at (e.g. a specific line, variable, or condition)."
+        "provide ONE short hint (2-3 sentences) that nudges them toward the fix.\n"
+        "Rules:\n"
+        "- Do NOT give the full solution or rewrite the entire code.\n"
+        "- Do NOT paste the final corrected code.\n"
+        "- You may reference a line, variable, operator, or condition.\n"
+        f"Hint stage: {stage}. {stage_instructions.get(stage, stage_instructions[1])}"
     )
 
     user_content = (

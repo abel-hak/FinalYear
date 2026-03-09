@@ -97,15 +97,18 @@ const QuestPage: React.FC = () => {
   const [code, setCode] = useState('');
   const [feedback, setFeedback] = useState<FeedbackState>('none');
   const [output, setOutput] = useState('');
+  const [expectedOutput, setExpectedOutput] = useState<string | null>(null);
+  const [actualOutput, setActualOutput] = useState<string | null>(null);
   const [showConcept, setShowConcept] = useState(false);
   const [mascotMood, setMascotMood] = useState<MascotMood>('idle');
   const [mascotMessage, setMascotMessage] = useState<string>("");
   const [timeRemaining, setTimeRemaining] = useState(300); // 5 minutes
   const [isTimerRunning, setIsTimerRunning] = useState(true);
-  const [aiHint, setAiHint] = useState<string | null>(null);
+  const [aiHints, setAiHints] = useState<{ number: number; text: string }[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiHintsRemaining, setAiHintsRemaining] = useState<number | null>(null);
+  const [aiHintLimit, setAiHintLimit] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,7 +116,7 @@ const QuestPage: React.FC = () => {
       if (!id) return;
       try {
         setLoading(true);
-        setAiHint(null);
+        setAiHints([]);
         setAiHintsRemaining(null);
         const quest = await fetchQuestDetail(id);
         if (cancelled) return;
@@ -219,6 +222,15 @@ const QuestPage: React.FC = () => {
       } else {
         setFeedback('error');
       }
+      // Show expected vs actual on failure (first non-hidden failing test case)
+      if (!result.passed) {
+        const firstFail = (result.test_results ?? []).find((t) => !t.passed && !t.is_hidden);
+        setExpectedOutput(firstFail?.expected_output ?? null);
+        setActualOutput(result.actual_output ?? null);
+      } else {
+        setExpectedOutput(null);
+        setActualOutput(null);
+      }
       setOutput((result.stdout || '') + (result.stderr || ''));
       setIsTimerRunning(false);
     } catch (e: any) {
@@ -237,7 +249,9 @@ const QuestPage: React.FC = () => {
     setCode(initialCode);
     setFeedback('none');
     setOutput('');
-    setAiHint(null);
+    setExpectedOutput(null);
+    setActualOutput(null);
+      setAiHints([]);
     setAiError(null);
     setShowConcept(false);
     setMascotMood('idle');
@@ -264,8 +278,13 @@ const QuestPage: React.FC = () => {
         code,
         lastOutput: output || null,
       });
-      setAiHint(resp.hint);
+      setAiHints((prev) => {
+        const next = [...prev];
+        next.push({ number: resp.hint_number ?? next.length + 1, text: resp.hint });
+        return next;
+      });
       setAiHintsRemaining(resp.remaining);
+      setAiHintLimit(resp.limit ?? null);
     } catch (e: any) {
       setAiError(e.message ?? "AI hint failed");
       if (e.message?.includes("No hints remaining") || e.message?.includes("limit")) {
@@ -515,6 +534,8 @@ const QuestPage: React.FC = () => {
                   title="Not Quite Right"
                   message="The code still has issues. Check the output below and try again."
                   output={output}
+                  expectedOutput={expectedOutput}
+                  actualOutput={actualOutput}
                 />
                 {meta && (
                   <ErrorExplanation
@@ -542,9 +563,10 @@ const QuestPage: React.FC = () => {
               )}
               <HintPanel
                 hints={meta?.hints ?? []}
-                aiHint={aiHint}
+                aiHints={aiHints}
                 aiLoading={aiLoading}
                 aiHintsRemaining={aiHintsRemaining}
+                aiHintLimit={aiHintLimit}
                 onAskAiHint={handleAskAiHint}
               />
             </div>

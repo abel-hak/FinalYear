@@ -2,6 +2,7 @@
 Admin APIs for managing quests and test cases.
 Requires admin role (RBAC enforced via get_current_admin).
 """
+# pylint: disable=not-callable,unused-argument
 from datetime import datetime, timedelta, timezone
 from typing import List
 
@@ -36,6 +37,8 @@ from app.schemas.admin import (
     LearningPathAdmin,
     LearningPathQuestAdmin,
     LearningPathAddQuest,
+    QuestQualityIssue,
+    QuestQualityReport,
 )
 from pydantic import UUID4
 
@@ -218,6 +221,65 @@ async def list_quests_admin(
     result = await db.execute(select(Quest).order_by(Quest.order_rank))
     quests = result.scalars().all()
     return quests
+
+
+@router.get("/quests/quality", response_model=QuestQualityReport)
+async def quest_quality_report(
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Basic content quality checks for quests:
+    - missing tags
+    - missing explanation
+    - missing solution code
+    - missing test cases
+    """
+    q_result = await db.execute(
+        select(Quest).where(Quest.is_deleted.is_(False)).order_by(Quest.order_rank)
+    )
+    quests = list(q_result.scalars().all())
+
+    tc_counts_result = await db.execute(
+        select(TestCase.quest_id, func.count(TestCase.id))
+        .where(TestCase.is_deleted.is_(False))
+        .group_by(TestCase.quest_id)
+    )
+    tc_counts = {qid: int(cnt) for (qid, cnt) in tc_counts_result.all()}
+
+    items: list[QuestQualityIssue] = []
+    for q in quests:
+        issues: list[str] = []
+        if not q.title or not q.title.strip():
+            issues.append("Missing title")
+        if not q.description or not q.description.strip():
+            issues.append("Missing description")
+        if not q.initial_code or not q.initial_code.strip():
+            issues.append("Missing initial_code")
+        if not q.solution_code or not q.solution_code.strip():
+            issues.append("Missing solution_code")
+        if not q.explanation or not q.explanation.strip():
+            issues.append("Missing explanation")
+        if not q.tags or len(q.tags) == 0:
+            issues.append("Missing tags")
+        if tc_counts.get(q.id, 0) <= 0:
+            issues.append("No test cases")
+
+        if issues:
+            items.append(
+                QuestQualityIssue(
+                    quest_id=q.id,
+                    order_rank=int(q.order_rank),
+                    title=q.title,
+                    issues=issues,
+                )
+            )
+
+    return QuestQualityReport(
+        total_quests=len(quests),
+        quests_with_issues=len(items),
+        items=items,
+    )
 
 
 @router.post("/quests", response_model=QuestAdmin, status_code=201)

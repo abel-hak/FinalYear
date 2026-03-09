@@ -46,7 +46,9 @@ async def get_hint_remaining(
     except ValueError:
         return {"remaining": HINT_LIMIT_PER_QUEST}
     count_row = await db.execute(
-        select(func.count()).select_from(HintRequest).where(
+        select(func.count())
+        .select_from(HintRequest)
+        .where(
             HintRequest.learner_id == learner.id,
             HintRequest.quest_id == qid,
         )
@@ -87,7 +89,9 @@ async def get_ai_hint(
 
     # Check hint limit
     count_row = await db.execute(
-        select(func.count()).select_from(HintRequest).where(
+        select(func.count())
+        .select_from(HintRequest)
+        .where(
             HintRequest.learner_id == learner.id,
             HintRequest.quest_id == payload.quest_id,
         )
@@ -99,12 +103,14 @@ async def get_ai_hint(
             detail=f"No hints remaining for this quest (limit: {HINT_LIMIT_PER_QUEST})",
         )
 
+    hint_number = int(used) + 1
     try:
         hint_text = await generate_hint(
             quest_title=quest.title,
             quest_description=quest.description,
             learner_code=payload.code,
             last_output=payload.last_output,
+            hint_number=hint_number,
         )
     except RuntimeError as exc:
         raise HTTPException(
@@ -128,5 +134,10 @@ async def get_ai_hint(
     await db.commit()
 
     remaining = max(0, HINT_LIMIT_PER_QUEST - used - 1)
-    return AiHintResponse(hint=hint_text, remaining=remaining)
+    return AiHintResponse(
+        hint=hint_text,
+        remaining=remaining,
+        hint_number=hint_number,
+        limit=HINT_LIMIT_PER_QUEST,
+    )
 

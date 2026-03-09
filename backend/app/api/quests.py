@@ -20,7 +20,7 @@ from app.models.learner import Learner
 from app.core.security import get_current_learner
 from app.models.user import User
 from app.schemas.quest import QuestSummary, QuestDetail
-from app.schemas.execute import SubmissionRequest, SubmissionResult
+from app.schemas.execute import SubmissionRequest, SubmissionResult, TestCaseResult
 from app.core.sandbox import run_python
 from app.config import get_settings
 from pydantic import UUID4
@@ -249,7 +249,7 @@ async def submit_quest(
     limit = get_settings().submission_rate_limit_per_minute
     cutoff = datetime.now(timezone.utc) - timedelta(seconds=60)
     count_row = await db.execute(
-        select(func.count(Submission.id))
+        select(func.count())
         .select_from(Submission)
         .where(
             Submission.learner_id == learner.id,
@@ -274,12 +274,36 @@ async def submit_quest(
 
     tests_total = len(test_cases)
     tests_passed = 0
-    stdout = (sandbox_result.stdout or "").rstrip("\n")
+    actual_output = (sandbox_result.stdout or "")
+    normalized_actual = actual_output.rstrip("\n")
+
+    test_results: list[TestCaseResult] = []
     if not sandbox_result.timed_out and sandbox_result.exit_code == 0:
         for tc in test_cases:
-            expected = (tc.expected_output or "").rstrip("\n")
-            if stdout == expected:
+            expected_raw = tc.expected_output or ""
+            expected_norm = expected_raw.rstrip("\n")
+            ok = normalized_actual == expected_norm
+            if ok:
                 tests_passed += 1
+            test_results.append(
+                TestCaseResult(
+                    test_case_id=tc.id,
+                    passed=ok,
+                    expected_output=None if tc.is_hidden else expected_raw,
+                    is_hidden=bool(tc.is_hidden),
+                )
+            )
+    else:
+        # If code didn't run cleanly, mark all tests as failed (expected still provided for non-hidden tests).
+        for tc in test_cases:
+            test_results.append(
+                TestCaseResult(
+                    test_case_id=tc.id,
+                    passed=False,
+                    expected_output=None if tc.is_hidden else (tc.expected_output or ""),
+                    is_hidden=bool(tc.is_hidden),
+                )
+            )
     passed = tests_passed == tests_total and tests_total > 0
 
     # Check if learner already passed this quest before
@@ -340,5 +364,7 @@ async def submit_quest(
         tests_total=tests_total,
         stdout=sandbox_result.stdout,
         stderr=sandbox_result.stderr,
+        actual_output=actual_output,
+        test_results=test_results,
     )
 
