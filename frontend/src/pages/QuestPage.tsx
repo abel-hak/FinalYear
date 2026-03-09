@@ -26,6 +26,8 @@ import { fetchQuestDetail, submitQuestSolution, requestAiHint, fetchHintRemainin
 const localQuestMeta: Record<
   string,
   {
+    title: string;
+    description: string;
     difficulty: 'beginner' | 'intermediate' | 'advanced';
     category: string;
     xp: number;
@@ -88,6 +90,8 @@ const QuestPage: React.FC = () => {
   const [backendExplanationUnlocked, setBackendExplanationUnlocked] = useState(false);
   const [prevQuestId, setPrevQuestId] = useState<string | null>(null);
   const [nextQuestId, setNextQuestId] = useState<string | null>(null);
+  const [questLevel, setQuestLevel] = useState<number>(1);
+  const [questTags, setQuestTags] = useState<string[]>([]);
   const meta = id ? localQuestMeta[id] : undefined;
 
   const [code, setCode] = useState('');
@@ -121,6 +125,8 @@ const QuestPage: React.FC = () => {
         setBackendExplanationUnlocked(quest.explanation_unlocked);
         setPrevQuestId(quest.prev_id ?? null);
         setNextQuestId(quest.next_id ?? null);
+        setQuestLevel(quest.level ?? 1);
+        setQuestTags(Array.isArray(quest.tags) ? quest.tags : []);
         setLoadError(null);
         setFeedback('none');
         setOutput('');
@@ -420,7 +426,7 @@ const QuestPage: React.FC = () => {
                   </div>
                 )}
                 
-                {(meta || backendExplanation) && !showConcept && (
+                {!showConcept && (
                   <Button 
                     variant="gold" 
                     className="w-full"
@@ -431,23 +437,31 @@ const QuestPage: React.FC = () => {
                   </Button>
                 )}
                 
-                {showConcept && (meta || backendExplanation) && (
+                {showConcept && (
                   <KnowledgeScroll
-                    concept={meta ? meta.category : "Quest concept"}
-                    title={meta ? meta.conceptExplanation.title : "How this solution works"}
+                    concept={meta ? meta.category : (questTags[0] ?? `Level ${questLevel}`)}
+                    title={meta ? meta.conceptExplanation.title : "What you learned"}
                     description={
                       meta
                         ? meta.conceptExplanation.content
-                        : backendExplanation || "Here is an overview of what this code is supposed to do and why the correct solution works."
+                        : backendExplanation || `You just solved: "${title}". Here's the core idea behind the fix and how to apply it again.`
                     }
-                    difficulty={meta ? meta.difficulty : "beginner"}
+                    difficulty={
+                      meta
+                        ? meta.difficulty
+                        : questLevel <= 1
+                          ? "beginner"
+                          : questLevel === 2
+                            ? "intermediate"
+                            : "advanced"
+                    }
                     sections={[
                       {
-                        title: "Understanding the Concept",
+                        title: "Understanding the concept",
                         content:
                           meta
                             ? meta.conceptExplanation.content
-                            : backendExplanation || "Review the problem description and compare it with your fixed code.",
+                            : backendExplanation || "Review the problem description and compare it with your fixed code. Focus on what caused the failure and what change made the program behave correctly.",
                         codeExamples: [
                           {
                             title: "Example solution",
@@ -455,9 +469,22 @@ const QuestPage: React.FC = () => {
                             explanation: "One possible starting point or solution for this quest."
                           }
                         ]
-                      }
+                      },
+                      ...(meta
+                        ? []
+                        : [
+                            {
+                              title: "How to remember it",
+                              content:
+                                "When debugging, isolate the smallest change that fixes the behavior. Use prints or quick checks to confirm your assumptions, and re-run tests after each change.",
+                            },
+                          ]),
                     ]}
-                    relatedConcepts={['Python Basics', 'Error Handling', 'Best Practices']}
+                    relatedConcepts={
+                      questTags.length > 0
+                        ? questTags
+                        : ['Python Basics', 'Debugging', 'Error Handling', 'Best Practices']
+                    }
                   />
                 )}
               </div>

@@ -39,6 +39,12 @@ const KnowledgeScroll: React.FC<KnowledgeScrollProps> = ({
   const [expandedSections, setExpandedSections] = useState<number[]>([0]);
   const [isBookmarked, setIsBookmarked] = useState(false);
 
+  const openConceptLink = (label: string) => {
+    // Simple, reliable fallback: open a web search for the concept.
+    const url = `https://www.google.com/search?q=${encodeURIComponent(`python ${label}`)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   const toggleSection = (index: number) => {
     setExpandedSections(prev => 
       prev.includes(index) 
@@ -198,6 +204,7 @@ const KnowledgeScroll: React.FC<KnowledgeScrollProps> = ({
                     key={index}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
+                    onClick={() => openConceptLink(concept)}
                     className="px-3 py-1.5 rounded-lg bg-accent/20 text-accent text-sm hover:bg-accent/30 transition-colors flex items-center gap-1"
                   >
                     {concept}

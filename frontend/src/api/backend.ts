@@ -74,6 +74,7 @@ export interface QuestDetailDto {
   initial_code: string;
   explanation_unlocked: boolean;
   explanation?: string | null;
+  tags?: string[];
   prev_id?: string | null;
   next_id?: string | null;
 }
