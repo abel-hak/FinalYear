@@ -10,9 +10,14 @@ import {
   Zap, 
   Target,
   Star,
+  Flame,
+  Shield,
+  CheckCircle2,
+  BookOpen,
   Lock
 } from 'lucide-react';
-import { fetchProgress } from '@/api/backend';
+import { fetchAchievements, type AchievementDto } from '@/api/backend';
+import { toast } from '@/components/ui/sonner';
 
 interface Achievement {
   id: string;
@@ -25,54 +30,34 @@ interface Achievement {
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
 }
 
-const buildAchievements = (
-  completedCount: number,
-  totalQuests: number,
-  totalXP: number
-): Achievement[] => {
-  return [
-    {
-      id: 'first-quest',
-      title: 'First Fix',
-      description: 'Complete your first debugging quest',
-      icon: <Bug className="w-6 h-6" />,
-      xp: 50,
-      unlocked: completedCount >= 1,
-      rarity: 'common',
-      progress: { current: Math.min(completedCount, 1), max: 1 },
-    },
-    {
-      id: 'three-quests',
-      title: 'Quest Trio',
-      description: 'Complete 3 debugging quests',
-      icon: <Target className="w-6 h-6" />,
-      xp: 150,
-      unlocked: completedCount >= 3,
-      rarity: 'rare',
-      progress: { current: Math.min(completedCount, 3), max: 3 },
-    },
-    {
-      id: 'all-quests',
-      title: 'Python Path Complete',
-      description: 'Complete all available quests',
-      icon: <Code2 className="w-6 h-6" />,
-      xp: 300,
-      unlocked: totalQuests > 0 && completedCount === totalQuests,
-      rarity: 'epic',
-      progress: { current: completedCount, max: totalQuests || 1 },
-    },
-    {
-      id: 'xp-collector',
-      title: 'XP Collector',
-      description: 'Earn at least 30 XP',
-      icon: <Zap className="w-6 h-6" />,
-      xp: 100,
-      unlocked: totalXP >= 30,
-      rarity: 'rare',
-      progress: { current: Math.min(totalXP, 30), max: 30 },
-    },
-  ];
+const ICONS: Record<string, React.ReactNode> = {
+  bug: <Bug className="w-6 h-6" />,
+  target: <Target className="w-6 h-6" />,
+  trophy: <Trophy className="w-6 h-6" />,
+  star: <Star className="w-6 h-6" />,
+  code: <Code2 className="w-6 h-6" />,
+  zap: <Zap className="w-6 h-6" />,
+  sparkles: <Sparkles className="w-6 h-6" />,
+  flame: <Flame className="w-6 h-6" />,
+  shield: <Shield className="w-6 h-6" />,
+  check: <CheckCircle2 className="w-6 h-6" />,
+  book: <BookOpen className="w-6 h-6" />,
 };
+
+const STORAGE_KEY = "codequest_unlocked_achievements_v1";
+
+function mapDto(dto: AchievementDto): Achievement {
+  return {
+    id: dto.id,
+    title: dto.title,
+    description: dto.description,
+    icon: ICONS[dto.icon_key] ?? <Trophy className="w-6 h-6" />,
+    xp: dto.xp,
+    unlocked: dto.unlocked,
+    rarity: dto.rarity,
+    progress: dto.progress ? { current: dto.progress.current, max: dto.progress.max } : undefined,
+  };
+}
 
 const rarityColors = {
   common: 'from-gray-400 to-gray-500',
@@ -92,15 +77,29 @@ const Achievements: React.FC = () => {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<"all" | "unlocked" | "locked" | "in_progress">("all");
 
   useEffect(() => {
     async function load() {
       try {
         setLoading(true);
-        const progress = await fetchProgress();
-        const completed = progress.quests.filter((q) => q.status === 'completed').length;
-        const list = buildAchievements(completed, progress.quests.length, progress.total_points);
+        const data = await fetchAchievements();
+        const list = data.map(mapDto);
         setAchievements(list);
+
+        // Toast newly unlocked achievements (compared to last seen).
+        const prev = new Set<string>(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]"));
+        const nowUnlocked = list.filter((a) => a.unlocked).map((a) => a.id);
+        const newlyUnlocked = list.filter((a) => a.unlocked && !prev.has(a.id));
+        if (newlyUnlocked.length > 0) {
+          newlyUnlocked.slice(0, 3).forEach((a) => {
+            toast(`Achievement unlocked: ${a.title}`, {
+              description: a.description,
+            });
+          });
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(nowUnlocked));
+
         setError(null);
       } catch (e) {
         console.error(e);
@@ -115,6 +114,13 @@ const Achievements: React.FC = () => {
 
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
   const totalXPFromAchievements = achievements.filter((a) => a.unlocked).reduce((sum, a) => sum + a.xp, 0);
+  const filtered = achievements.filter((a) => {
+    if (filter === "all") return true;
+    if (filter === "unlocked") return a.unlocked;
+    if (filter === "locked") return !a.unlocked;
+    // in_progress: has progress and not unlocked
+    return !a.unlocked && !!a.progress && a.progress.current > 0;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -161,10 +167,32 @@ const Achievements: React.FC = () => {
         {error && !loading && (
           <p className="text-sm text-red-400 mb-4">{error}</p>
         )}
+
+        {/* Filters */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          {[
+            ["all", "All"],
+            ["unlocked", "Unlocked"],
+            ["in_progress", "In progress"],
+            ["locked", "Locked"],
+          ].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key as any)}
+              className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                filter === key
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-card border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         
         {/* Achievement Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {achievements.map((achievement) => (
+          {filtered.map((achievement) => (
             <AchievementCard key={achievement.id} achievement={achievement} />
           ))}
         </div>

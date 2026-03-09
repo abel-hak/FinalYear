@@ -206,6 +206,16 @@ const QuestPage: React.FC = () => {
       const result = await submitQuestSolution(id, code);
       if (result.passed) {
         setFeedback('success');
+        // Refresh quest detail so navigation updates (next quest becomes unlocked/current).
+        try {
+          const q = await fetchQuestDetail(id);
+          setPrevQuestId(q.prev_id ?? null);
+          setNextQuestId(q.next_id ?? null);
+          setBackendExplanation(q.explanation ?? null);
+          setBackendExplanationUnlocked(q.explanation_unlocked);
+        } catch {
+          // Ignore refresh errors; success state already shown.
+        }
       } else {
         setFeedback('error');
       }

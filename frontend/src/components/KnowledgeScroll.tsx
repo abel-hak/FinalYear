@@ -4,6 +4,7 @@ import { Book, ChevronRight, ChevronDown, Code2, Lightbulb, ExternalLink, Bookma
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getAggregatedResources, getBestUrlForConcept } from '@/lib/conceptResources';
 
 interface CodeExample {
   title: string;
@@ -40,10 +41,11 @@ const KnowledgeScroll: React.FC<KnowledgeScrollProps> = ({
   const [isBookmarked, setIsBookmarked] = useState(false);
 
   const openConceptLink = (label: string) => {
-    // Simple, reliable fallback: open a web search for the concept.
-    const url = `https://www.google.com/search?q=${encodeURIComponent(`python ${label}`)}`;
+    const url = getBestUrlForConcept(label);
     window.open(url, '_blank', 'noopener,noreferrer');
   };
+
+  const resources = getAggregatedResources(relatedConcepts);
 
   const toggleSection = (index: number) => {
     setExpandedSections(prev => 
@@ -212,6 +214,30 @@ const KnowledgeScroll: React.FC<KnowledgeScrollProps> = ({
                   </motion.button>
                 ))}
               </div>
+
+              {resources.length > 0 && (
+                <div className="mt-4 border-t border-accent/20 pt-3 space-y-2">
+                  <div className="text-xs font-semibold text-accent/90">Resources</div>
+                  <ul className="space-y-1">
+                    {resources.slice(0, 6).map((r) => (
+                      <li key={r.url} className="text-xs">
+                        <a
+                          href={r.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-accent hover:underline"
+                        >
+                          {r.label}
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                        {r.source && (
+                          <span className="ml-2 text-muted-foreground">({r.source})</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </motion.div>
           )}
         </div>

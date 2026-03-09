@@ -1,8 +1,9 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Header from '@/components/Header';
-import { Check, Lock, ChevronRight, BookOpen } from 'lucide-react';
+import { Check, Lock, ChevronRight, BookOpen, ExternalLink } from 'lucide-react';
 import { fetchLearningPathDetail, type LearningPathDetailDto, type LearningPathQuestItemDto } from '@/api/backend';
+import { getAggregatedResources, getBestUrlForConcept } from '@/lib/conceptResources';
 
 const LearningPathDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +37,12 @@ const LearningPathDetail: React.FC = () => {
 
   const completedCount = path?.quests.filter((q) => q.status === 'completed').length ?? 0;
   const isLocked = path && path.is_unlocked === false;
+  const allTags = React.useMemo(() => {
+    const set = new Set<string>();
+    (path?.quests ?? []).forEach((q) => (q.tags ?? []).forEach((t) => set.add(t)));
+    return Array.from(set).sort();
+  }, [path]);
+  const resources = React.useMemo(() => getAggregatedResources(allTags), [allTags]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -80,6 +87,54 @@ const LearningPathDetail: React.FC = () => {
                 {path.description}
               </p>
             </div>
+
+            {(allTags.length > 0 || resources.length > 0) && (
+              <div className="mb-8 p-4 rounded-xl border border-border bg-card">
+                <div className="flex items-center justify-between gap-4 mb-3">
+                  <h2 className="font-semibold text-foreground">Learn the concepts</h2>
+                  <span className="text-xs text-muted-foreground">
+                    {allTags.length} topic{allTags.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+
+                {allTags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {allTags.slice(0, 12).map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => window.open(getBestUrlForConcept(tag), "_blank", "noopener,noreferrer")}
+                        className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm hover:bg-primary/15 transition-colors inline-flex items-center gap-1"
+                      >
+                        {tag}
+                        <ExternalLink className="w-3 h-3" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {resources.length > 0 && (
+                  <div className="mt-4 border-t border-border pt-3">
+                    <div className="text-xs font-semibold text-muted-foreground mb-2">Curated resources</div>
+                    <ul className="space-y-1">
+                      {resources.slice(0, 6).map((r) => (
+                        <li key={r.url} className="text-xs">
+                          <a
+                            href={r.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-primary hover:underline"
+                          >
+                            {r.label}
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                          {r.source && <span className="ml-2 text-muted-foreground">({r.source})</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="space-y-3">
               {path.quests.map((quest, idx) => (

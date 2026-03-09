@@ -20,6 +20,7 @@ const periodLabels: Record<LeaderboardPeriod, string> = {
 
 const Leaderboard: React.FC = () => {
   const [entries, setEntries] = useState<LeaderboardEntryDto[]>([]);
+  const [me, setMe] = useState<LeaderboardEntryDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<LeaderboardPeriod>("all");
@@ -29,7 +30,10 @@ const Leaderboard: React.FC = () => {
     setLoading(true);
     fetchLeaderboard(20, period)
       .then((data) => {
-        if (!cancelled) setEntries(data);
+        if (!cancelled) {
+          setEntries(data.entries ?? []);
+          setMe((data.me as any) ?? null);
+        }
       })
       .catch((e) => {
         if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
@@ -91,19 +95,52 @@ const Leaderboard: React.FC = () => {
           </Card>
         ) : (
           <div className="space-y-3 max-w-2xl">
+            {me && (
+              <Card className="border-primary/50 bg-primary/10">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 text-center text-2xl font-bold">
+                      {me.rank ? `#${me.rank}` : "—"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold truncate">You ({me.username})</p>
+                      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          {me.total_points} XP
+                        </span>
+                        <span>{me.quests_completed} quests</span>
+                        {me.streak_days > 0 && (
+                          <span className="flex items-center gap-1 text-orange-600">
+                            <Flame className="w-3.5 h-3.5" />
+                            {me.streak_days} day streak
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <Badge variant="gold" className="shrink-0">
+                      Your rank
+                    </Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {entries.map((entry) => (
               <Card
-                key={entry.rank}
+                key={`${entry.rank ?? "na"}-${entry.username}`}
                 className={
-                  entry.rank <= 3
-                    ? "border-primary/30 bg-primary/5"
-                    : ""
+                  entry.is_me
+                    ? "border-primary/50 bg-primary/10"
+                    : (entry.rank ?? 999) <= 3
+                      ? "border-primary/30 bg-primary/5"
+                      : ""
                 }
               >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
                     <div className="w-12 text-center text-2xl font-bold">
-                      {rankMedals[entry.rank] ?? `#${entry.rank}`}
+                      {entry.rank ? (rankMedals[entry.rank] ?? `#${entry.rank}`) : "—"}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold truncate">{entry.username}</p>
@@ -122,7 +159,7 @@ const Leaderboard: React.FC = () => {
                       </div>
                     </div>
                     <Badge variant="gold" className="shrink-0">
-                      #{entry.rank}
+                      {entry.rank ? `#${entry.rank}` : "—"}
                     </Badge>
                   </div>
                 </CardContent>

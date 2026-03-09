@@ -74,13 +74,13 @@ async def list_quests(
     current_assigned = False
     for q in quests:
         if q.id in completed_ids:
-            status = "completed"
+            quest_status = "completed"
         elif previous_completed and not current_assigned:
-            status = "current"
+            quest_status = "current"
             current_assigned = True
             previous_completed = False
         else:
-            status = "locked"
+            quest_status = "locked"
             previous_completed = False
         summaries.append(
             QuestSummary(
@@ -89,7 +89,7 @@ async def list_quests(
                 description=q.description,
                 level=q.level,
                 order_rank=q.order_rank,
-                status=status,
+                status=quest_status,
                 tags=q.tags if q.tags else [],
             )
         )
@@ -125,6 +125,42 @@ async def get_quest(
         await db.flush()
     learner_id = learner.id
 
+    # Compute linear progression status for all quests for this learner.
+    # This lets us both enforce locked quests and provide safe prev/next navigation.
+    all_quests_result = await db.execute(
+        select(Quest.id, Quest.order_rank)
+        .where(Quest.is_deleted.is_(False))
+        .order_by(Quest.order_rank)
+    )
+    ordered = list(all_quests_result.all())  # [(id, order_rank)]
+
+    completed_ids_result = await db.execute(
+        select(Submission.quest_id)
+        .where(Submission.learner_id == learner_id, Submission.passed.is_(True))
+        .distinct()
+    )
+    completed_ids = {row[0] for row in completed_ids_result.all()}
+
+    statuses: dict = {}
+    previous_completed = True
+    current_assigned = False
+    for qid, _ in ordered:
+        if qid in completed_ids:
+            statuses[qid] = "completed"
+        elif previous_completed and not current_assigned:
+            statuses[qid] = "current"
+            current_assigned = True
+            previous_completed = False
+        else:
+            statuses[qid] = "locked"
+            previous_completed = False
+
+    if statuses.get(quest.id) == "locked":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Quest is locked. Complete the current quest to unlock it.",
+        )
+
     # Has the learner completed this quest?
     sub = await db.execute(
         select(Submission)
@@ -137,21 +173,19 @@ async def get_quest(
     )
     completed = sub.scalar_one_or_none() is not None
 
-    # Prev/next quest IDs for navigation (ordered by order_rank)
-    all_quests_result = await db.execute(
-        select(Quest.id, Quest.order_rank)
-        .where(Quest.is_deleted.is_(False))
-        .order_by(Quest.order_rank)
-    )
-    ordered = list(all_quests_result.all())
+    # Prev/next quest IDs for navigation (only if accessible, i.e. not locked)
     prev_id = None
     next_id = None
     for i, (qid, _) in enumerate(ordered):
         if qid == quest.id:
             if i > 0:
-                prev_id = ordered[i - 1][0]
+                candidate = ordered[i - 1][0]
+                if statuses.get(candidate) != "locked":
+                    prev_id = candidate
             if i < len(ordered) - 1:
-                next_id = ordered[i + 1][0]
+                candidate = ordered[i + 1][0]
+                if statuses.get(candidate) != "locked":
+                    next_id = candidate
             break
 
     return QuestDetail(
@@ -215,7 +249,7 @@ async def submit_quest(
     limit = get_settings().submission_rate_limit_per_minute
     cutoff = datetime.now(timezone.utc) - timedelta(seconds=60)
     count_row = await db.execute(
-        select(func.count())
+        select(func.count(Submission.id))
         .select_from(Submission)
         .where(
             Submission.learner_id == learner.id,
@@ -232,11 +266,11 @@ async def submit_quest(
     # Run code once (MVP: test cases do not vary input)
     try:
         sandbox_result = run_python(payload.code, timeout_seconds=5)
-    except Exception:
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="System Busy. Please try again later.",
-        )
+        ) from exc
 
     tests_total = len(test_cases)
     tests_passed = 0
@@ -293,11 +327,11 @@ async def submit_quest(
 
     try:
         await db.commit()
-    except SQLAlchemyError:
+    except SQLAlchemyError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="System Busy. Please try again later.",
-        )
+        ) from exc
 
     return SubmissionResult(
         quest_id=quest.id,

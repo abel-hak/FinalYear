@@ -105,6 +105,24 @@ export interface AiHintResponseDto {
   remaining: number;
 }
 
+export type AchievementRarity = "common" | "rare" | "epic" | "legendary";
+
+export interface AchievementProgressDto {
+  current: number;
+  max: number;
+}
+
+export interface AchievementDto {
+  id: string;
+  title: string;
+  description: string;
+  icon_key: string;
+  xp: number;
+  rarity: AchievementRarity;
+  unlocked: boolean;
+  progress?: AchievementProgressDto | null;
+}
+
 export interface AdminStatsDto {
   total_users: number;
   quests_completed: number;
@@ -321,19 +339,25 @@ export async function fetchReviewSuggestions(): Promise<ReviewSuggestionDto[]> {
 }
 
 export interface LeaderboardEntryDto {
-  rank: number;
+  rank: number | null;
   username: string;
   total_points: number;
   streak_days: number;
   quests_completed: number;
+  is_me?: boolean;
 }
 
 export type LeaderboardPeriod = "all" | "weekly" | "monthly";
 
+export interface LeaderboardResponseDto {
+  entries: LeaderboardEntryDto[];
+  me?: LeaderboardEntryDto | null;
+}
+
 export async function fetchLeaderboard(
   limit?: number,
   period?: LeaderboardPeriod
-): Promise<LeaderboardEntryDto[]> {
+): Promise<LeaderboardResponseDto> {
   const token = getToken();
   if (!token) throw new Error("Not authenticated");
   const params = new URLSearchParams();
@@ -348,7 +372,7 @@ export async function fetchLeaderboard(
     }
     throw new Error(`Failed to load leaderboard: ${res.status}`);
   }
-  return (await res.json()) as LeaderboardEntryDto[];
+  return (await res.json()) as LeaderboardResponseDto;
 }
 
 export async function fetchQuestDetail(questId: string): Promise<QuestDetailDto> {
@@ -369,6 +393,26 @@ export async function fetchQuestDetail(questId: string): Promise<QuestDetailDto>
     throw new Error(`Failed to load quest: ${res.status}`);
   }
   return (await res.json()) as QuestDetailDto;
+}
+
+export async function fetchAchievements(): Promise<AchievementDto[]> {
+  const token = getToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+  const res = await fetch(`${API_BASE}/api/v1/achievements`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    throw new Error(`Failed to load achievements: ${res.status}`);
+  }
+  return (await res.json()) as AchievementDto[];
 }
 
 export async function submitQuestSolution(

@@ -116,6 +116,11 @@ async def get_ai_hint(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="AI hints are temporarily unavailable. Please try again in a few moments.",
         ) from exc
+    except (httpx.TimeoutException, httpx.RequestError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI hints are temporarily unavailable. Please try again in a few moments.",
+        ) from exc
 
     # Record hint request
     hint_req = HintRequest(learner_id=learner.id, quest_id=payload.quest_id)
