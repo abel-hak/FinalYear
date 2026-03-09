@@ -20,6 +20,7 @@ from app.models.test_case import TestCase
 from app.models.submission import Submission
 from app.models.learning_path import LearningPath, LearningPathQuest
 from app.config import get_settings
+from app.core.ai import generate_admin_quest_draft
 from app.schemas.admin import (
     QuestCreate,
     QuestUpdate,
@@ -40,6 +41,7 @@ from app.schemas.admin import (
     QuestQualityIssue,
     QuestQualityReport,
 )
+from app.schemas.ai_admin import AdminQuestAIDraftRequest, AdminQuestAIDraftResponse
 from pydantic import UUID4
 
 
@@ -279,6 +281,45 @@ async def quest_quality_report(
         total_quests=len(quests),
         quests_with_issues=len(items),
         items=items,
+    )
+
+
+@router.post("/quests/ai-draft", response_model=AdminQuestAIDraftResponse)
+async def ai_draft_quest(
+    payload: AdminQuestAIDraftRequest,
+    current_admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    draft = await generate_admin_quest_draft(
+        topic=payload.topic,
+        difficulty=payload.difficulty,
+        bug_type=payload.bug_type,
+        extra_instructions=payload.extra_instructions,
+    )
+
+    # Minimal validation + normalization
+    def _s(key: str) -> str:
+        v = draft.get(key, "")
+        if not isinstance(v, str):
+            return ""
+        return v.strip()
+
+    level = int(draft.get("level") or payload.difficulty or 1)
+    level = 1 if level < 1 else 3 if level > 3 else level
+    tags = draft.get("tags") or []
+    if not isinstance(tags, list):
+        tags = []
+    tags = [str(t).strip().lower() for t in tags if str(t).strip()][:5]
+
+    return AdminQuestAIDraftResponse(
+        title=_s("title") or f"{payload.topic.title()} Debug Quest",
+        description=_s("description") or f"Fix the bug related to {payload.topic}.",
+        level=level,
+        initial_code=_s("initial_code"),
+        solution_code=_s("solution_code"),
+        explanation=_s("explanation"),
+        expected_output=_s("expected_output"),
+        tags=tags,
     )
 
 

@@ -55,6 +55,13 @@ def _hash_password(password: str) -> str:
         pw = pw[:72]
     return bcrypt.hashpw(pw, bcrypt.gensalt()).decode("utf-8")
 
+def _normalize_code(s: str) -> str:
+    """
+    Convert literal backslash-n sequences into real newlines.
+    This prevents code being stored/displayed as: `print(x)\\nprint(y)`.
+    """
+    return (s or "").replace("\\r\\n", "\n").replace("\\n", "\n")
+
 
 QUESTS = [
     # -------------------------
@@ -446,8 +453,8 @@ def seed() -> None:
                 description=q["description"],
                 level=q["level"],
                 order_rank=q["order_rank"],
-                initial_code=q["initial_code"],
-                solution_code=q["solution_code"],
+                initial_code=_normalize_code(q["initial_code"]),
+                solution_code=_normalize_code(q["solution_code"]),
                 explanation=q["explanation"],
                 tags=q["tags"],
             )

@@ -26,6 +26,7 @@ import {
   Copy,
   Search,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -38,6 +39,7 @@ import {
   type QuestQualityReportDto,
 } from "@/api/backend";
 import { QuestEditorDialog } from "./QuestEditorDialog";
+import { AiQuestGeneratorDialog } from "./AiQuestGeneratorDialog";
 import { useToast } from "@/components/ui/use-toast";
 
 const levelLabels: Record<number, string> = {
@@ -65,6 +67,8 @@ export const ContentManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingQuest, setEditingQuest] = useState<AdminQuestDto | null>(null);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiPrefill, setAiPrefill] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminQuestDto | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -99,6 +103,22 @@ export const ContentManagement = () => {
 
   const handleCreate = () => {
     setEditingQuest(null);
+    setEditorOpen(true);
+  };
+
+  const handleAIDraft = (draft: any) => {
+    setEditingQuest(null);
+    setAiPrefill({
+      title: draft.title,
+      description: draft.description,
+      level: draft.level,
+      order_rank: nextOrderRank,
+      initial_code: draft.initial_code,
+      solution_code: draft.solution_code,
+      explanation: draft.explanation,
+      tags: draft.tags ?? [],
+      expected_output: draft.expected_output ?? "",
+    });
     setEditorOpen(true);
   };
 
@@ -247,6 +267,10 @@ export const ContentManagement = () => {
             {qualityLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             Quality Check
           </Button>
+          <Button variant="outline" className="gap-2" onClick={() => setAiOpen(true)}>
+            <Sparkles className="w-4 h-4" />
+            AI Generate
+          </Button>
           <Button className="gap-2" onClick={handleCreate}>
             <Plus className="w-4 h-4" />
             Add Quest
@@ -341,6 +365,14 @@ export const ContentManagement = () => {
         quest={editingQuest}
         nextOrderRank={nextOrderRank}
         onSaved={loadQuests}
+        prefill={aiPrefill}
+        clearSuggestedExpectedOutput={() => setAiPrefill(null)}
+      />
+
+      <AiQuestGeneratorDialog
+        open={aiOpen}
+        onOpenChange={setAiOpen}
+        onDraft={handleAIDraft as any}
       />
 
       <AlertDialog

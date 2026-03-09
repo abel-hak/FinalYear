@@ -104,6 +104,7 @@ export interface AdminQuestDto {
   initial_code: string;
   solution_code: string;
   explanation: string | null;
+  tags?: string[];
   is_deleted: boolean;
 }
 
@@ -118,6 +119,24 @@ export interface QuestQualityReportDto {
   total_quests: number;
   quests_with_issues: number;
   items: QuestQualityIssueDto[];
+}
+
+export interface AdminQuestAIDraftRequestDto {
+  topic: string;
+  difficulty: number;
+  bug_type: string;
+  extra_instructions?: string | null;
+}
+
+export interface AdminQuestAIDraftResponseDto {
+  title: string;
+  description: string;
+  level: number;
+  initial_code: string;
+  solution_code: string;
+  explanation: string;
+  expected_output: string;
+  tags: string[];
 }
 
 export interface AiHintResponseDto {
@@ -504,6 +523,32 @@ export async function fetchQuestQualityReport(): Promise<QuestQualityReportDto> 
   return (await res.json()) as QuestQualityReportDto;
 }
 
+export async function generateAdminQuestDraft(
+  payload: AdminQuestAIDraftRequestDto
+): Promise<AdminQuestAIDraftResponseDto> {
+  const token = getToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+  const res = await fetch(`${API_BASE}/api/v1/admin/quests/ai-draft`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    throw new Error(body.detail || `AI draft failed (${res.status})`);
+  }
+  return (await res.json()) as AdminQuestAIDraftResponseDto;
+}
+
 export async function updateAdminQuest(
   questId: string,
   payload: Partial<{
@@ -514,6 +559,7 @@ export async function updateAdminQuest(
     initial_code: string;
     solution_code: string;
     explanation: string;
+    tags: string[];
   }>
 ): Promise<AdminQuestDto> {
   const token = getToken();
@@ -756,6 +802,7 @@ export async function createAdminQuest(payload: {
   initial_code: string;
   solution_code: string;
   explanation: string;
+  tags?: string[];
 }): Promise<AdminQuestDto> {
   const token = getToken();
   if (!token) {

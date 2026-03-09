@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import time
 
 import httpx
@@ -169,4 +170,99 @@ async def generate_hint(
     # Should never reach here, but keep a safe fallback.
     _note_failure()
     raise RuntimeError("AI hints are temporarily unavailable. Please try again in a few moments.") from last_exc
+
+
+async def generate_admin_quest_draft(
+    *,
+    topic: str,
+    difficulty: int,
+    bug_type: str,
+    extra_instructions: str | None = None,
+) -> dict:
+    """
+    Generate a draft quest for admins (human-in-the-loop).
+    Returns a dict with: title, description, level, initial_code, solution_code, explanation, expected_output, tags.
+    """
+    settings = get_settings()
+    if not settings.ai_api_base or not settings.ai_api_key:
+        raise RuntimeError(
+            "AI service is not configured. "
+            "Set AI_API_BASE and AI_API_KEY (and optionally AI_MODEL) in the backend .env."
+        )
+    if _circuit_open():
+        raise RuntimeError("AI is temporarily unavailable. Please try again in a few moments.")
+
+    level = int(difficulty)
+    system_prompt = (
+        "You are creating debugging quests for a Python learning platform.\n"
+        "Return ONLY valid JSON (no markdown, no backticks) with keys:\n"
+        "title, description, level, initial_code, solution_code, explanation, expected_output, tags.\n"
+        "Constraints:\n"
+        "- level is an integer 1..3.\n"
+        "- initial_code must be BROKEN but close to correct.\n"
+        "- solution_code must be the minimal fix.\n"
+        "- expected_output must match exactly what solution_code prints (include trailing newline if printed).\n"
+        "- explanation should be 1-3 sentences and beginner-friendly.\n"
+        "- tags should be 2-5 short lowercase strings.\n"
+        "- Do not include any secrets, file system access, network calls, or unsafe code.\n"
+    )
+
+    user_prompt = (
+        f"Topic: {topic}\n"
+        f"Difficulty level (1-3): {level}\n"
+        f"Bug type: {bug_type}\n"
+        f"Extra instructions: {extra_instructions or '(none)'}\n"
+        "Make the quest runnable as a single Python script using print()."
+    )
+
+    payload = {
+        "model": settings.ai_model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": 0.3,
+        "max_tokens": 700,
+        "response_format": {"type": "json_object"},
+    }
+
+    headers = {
+        "Authorization": f"Bearer {settings.ai_api_key}",
+        "Content-Type": "application/json",
+    }
+
+    last_exc: Exception | None = None
+    for attempt in range(_AI_MAX_RETRIES + 1):
+        try:
+            async with httpx.AsyncClient(base_url=settings.ai_api_base, timeout=_AI_TIMEOUT_SECONDS) as client:
+                resp = await client.post("/chat/completions", json=payload, headers=headers)
+                resp.raise_for_status()
+                data = resp.json()
+
+            text = data["choices"][0]["message"]["content"]
+            draft = json.loads(text)
+            _note_success()
+            return draft
+        except httpx.HTTPStatusError as exc:
+            last_exc = exc
+            status = exc.response.status_code
+            if status in (429, 500, 502, 503, 504) and attempt < _AI_MAX_RETRIES:
+                await asyncio.sleep(_AI_BACKOFF_BASE_SECONDS * (2**attempt))
+                continue
+            _note_failure()
+            raise
+        except (httpx.TimeoutException, httpx.RequestError) as exc:
+            last_exc = exc
+            if attempt < _AI_MAX_RETRIES:
+                await asyncio.sleep(_AI_BACKOFF_BASE_SECONDS * (2**attempt))
+                continue
+            _note_failure()
+            raise RuntimeError("AI is temporarily unavailable. Please try again in a few moments.") from exc
+        except Exception as exc:
+            last_exc = exc
+            _note_failure()
+            raise RuntimeError("AI returned an invalid quest draft format. Please try again.") from exc
+
+    _note_failure()
+    raise RuntimeError("AI is temporarily unavailable. Please try again in a few moments.") from last_exc
 

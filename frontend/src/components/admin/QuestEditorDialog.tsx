@@ -34,6 +34,19 @@ interface QuestEditorDialogProps {
   quest: AdminQuestDto | null;
   nextOrderRank: number;
   onSaved: () => void;
+  prefill?: Partial<{
+    title: string;
+    description: string;
+    level: number;
+    order_rank: number;
+    initial_code: string;
+    solution_code: string;
+    explanation: string;
+    tags: string[];
+    expected_output: string;
+  }> | null;
+  suggestedExpectedOutput?: string;
+  clearSuggestedExpectedOutput?: () => void;
 }
 
 export function QuestEditorDialog({
@@ -42,6 +55,9 @@ export function QuestEditorDialog({
   quest,
   nextOrderRank,
   onSaved,
+  prefill = null,
+  suggestedExpectedOutput,
+  clearSuggestedExpectedOutput,
 }: QuestEditorDialogProps) {
   const { toast } = useToast();
   const isEdit = !!quest;
@@ -53,6 +69,7 @@ export function QuestEditorDialog({
   const [initialCode, setInitialCode] = useState("");
   const [solutionCode, setSolutionCode] = useState("");
   const [explanation, setExplanation] = useState("");
+  const [tags, setTags] = useState("");
   const [saving, setSaving] = useState(false);
   const [testCases, setTestCases] = useState<TestCaseDto[]>([]);
   const [testCasesOpen, setTestCasesOpen] = useState(false);
@@ -70,21 +87,30 @@ export function QuestEditorDialog({
         setInitialCode(quest.initial_code);
         setSolutionCode(quest.solution_code);
         setExplanation(quest.explanation ?? "");
+        setTags((quest.tags ?? []).join(", "));
         loadTestCases(quest.id);
       } else {
-        setTitle("");
-        setDescription("");
-        setLevel(1);
-        setOrderRank(nextOrderRank);
-        setInitialCode("");
-        setSolutionCode("");
-        setExplanation("");
+        setTitle(prefill?.title ?? "");
+        setDescription(prefill?.description ?? "");
+        setLevel(prefill?.level ?? 1);
+        setOrderRank(prefill?.order_rank ?? nextOrderRank);
+        setInitialCode(prefill?.initial_code ?? "");
+        setSolutionCode(prefill?.solution_code ?? "");
+        setExplanation(prefill?.explanation ?? "");
+        setTags((prefill?.tags ?? []).join(", "));
         setTestCases([]);
       }
-      setNewExpectedOutput("");
+      setNewExpectedOutput(suggestedExpectedOutput ?? prefill?.expected_output ?? "");
       setNewIsHidden(false);
     }
-  }, [open, quest, nextOrderRank]);
+  }, [open, quest, nextOrderRank, prefill, suggestedExpectedOutput]);
+
+  const parsedTags = () =>
+    tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .slice(0, 8);
 
   const loadTestCases = async (questId: string) => {
     setLoadingTestCases(true);
@@ -138,10 +164,11 @@ export function QuestEditorDialog({
           initial_code: initialCode.trim(),
           solution_code: solutionCode.trim(),
           explanation: explanation.trim(),
+          tags: parsedTags(),
         });
         toast({ title: "Quest updated successfully" });
       } else {
-        await createAdminQuest({
+        const created = await createAdminQuest({
           title: title.trim(),
           description: description.trim(),
           level,
@@ -149,11 +176,28 @@ export function QuestEditorDialog({
           initial_code: initialCode.trim(),
           solution_code: solutionCode.trim(),
           explanation: explanation.trim(),
+          tags: parsedTags(),
         });
+        // If expected output is filled, create first test case for the new quest.
+        if (newExpectedOutput.trim()) {
+          try {
+            await createTestCase(created.id, {
+              expected_output: newExpectedOutput.trim(),
+              is_hidden: newIsHidden,
+            });
+          } catch (e) {
+            toast({
+              title: "Quest created, but test case failed",
+              description: e instanceof Error ? e.message : "Unknown error",
+              variant: "destructive",
+            });
+          }
+        }
         toast({ title: "Quest created successfully" });
       }
       onSaved();
       onOpenChange(false);
+      clearSuggestedExpectedOutput?.();
     } catch (e) {
       toast({
         title: isEdit ? "Failed to update quest" : "Failed to create quest",
@@ -224,6 +268,15 @@ export function QuestEditorDialog({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Quest description"
               rows={3}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="tags">Tags (comma-separated)</Label>
+            <Input
+              id="tags"
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              placeholder="e.g. loops, range, conditions"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
