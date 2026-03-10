@@ -95,6 +95,20 @@ export interface SubmissionResultDto {
   }[];
 }
 
+export interface ExplainFailureRequestDto {
+  quest_id: string;
+  code: string;
+  expected_output?: string | null;
+  actual_output?: string | null;
+  stderr?: string | null;
+}
+
+export interface ExplainFailureResponseDto {
+  what_it_does: string;
+  why_wrong: string;
+  next_action: string;
+}
+
 export interface AdminQuestDto {
   id: string;
   title: string;
@@ -484,6 +498,33 @@ export async function submitQuestSolution(
     throw new Error(body.detail || `Submission failed (${res.status})`);
   }
   return (await res.json()) as SubmissionResultDto;
+}
+
+export async function explainFailure(payload: ExplainFailureRequestDto): Promise<ExplainFailureResponseDto> {
+  const token = getToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+  const res = await fetch(`${API_BASE}/api/v1/ai/explain-failure`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    if (res.status === 503) {
+      throw new Error(body.detail || "AI explanation temporarily unavailable. Please try again later.");
+    }
+    throw new Error(body.detail || `Failed to explain failure (${res.status})`);
+  }
+  return (await res.json()) as ExplainFailureResponseDto;
 }
 
 export async function fetchAdminQuests(): Promise<AdminQuestDto[]> {

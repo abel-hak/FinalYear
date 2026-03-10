@@ -266,3 +266,99 @@ async def generate_admin_quest_draft(
     _note_failure()
     raise RuntimeError("AI is temporarily unavailable. Please try again in a few moments.") from last_exc
 
+
+async def generate_failure_explanation(
+    *,
+    quest_title: str,
+    quest_description: str,
+    learner_code: str,
+    expected_output: str | None,
+    actual_output: str | None,
+    stderr: str | None,
+) -> dict:
+    """
+    Explain a failed submission:
+    - what the code currently does
+    - why that is wrong
+    - one concrete next action
+    """
+    settings = get_settings()
+    if not settings.ai_api_base or not settings.ai_api_key:
+        raise RuntimeError(
+            "AI service is not configured. "
+            "Set AI_API_BASE and AI_API_KEY (and optionally AI_MODEL) in the backend .env."
+        )
+    if _circuit_open():
+        raise RuntimeError("AI is temporarily unavailable. Please try again in a few moments.")
+
+    system_prompt = (
+        "You are a debugging tutor for beginner Python programmers.\n"
+        "Given the quest description, the learner's code, the expected output, the actual output, and stderr, "
+        "explain the failure.\n"
+        "Return ONLY valid JSON with keys: what_it_does, why_wrong, next_action.\n"
+        "- what_it_does: 1–2 sentences describing what the current code actually does.\n"
+        "- why_wrong: 1–3 sentences explaining the mismatch or bug (without giving the full solution).\n"
+        "- next_action: one concrete step the learner should take next (e.g. 'check the condition on line 3').\n"
+        "Do NOT include full corrected code. Do NOT leak the exact final answer."
+    )
+
+    user_prompt = (
+        f"Quest title: {quest_title}\n"
+        f"Quest description: {quest_description}\n\n"
+        f"Learner code:\n```python\n{learner_code}\n```\n\n"
+        f"Expected output:\n{expected_output or '(not available)'}\n\n"
+        f"Actual output:\n{actual_output or '(no output)'}\n\n"
+        f"stderr / error:\n{stderr or '(empty)'}\n"
+    )
+
+    payload = {
+        "model": settings.ai_model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": 0.3,
+        "max_tokens": 500,
+        "response_format": {"type": "json_object"},
+    }
+
+    headers = {
+        "Authorization": f"Bearer {settings.ai_api_key}",
+        "Content-Type": "application/json",
+    }
+
+    last_exc: Exception | None = None
+    for attempt in range(_AI_MAX_RETRIES + 1):
+        try:
+            async with httpx.AsyncClient(base_url=settings.ai_api_base, timeout=_AI_TIMEOUT_SECONDS) as client:
+                resp = await client.post("/chat/completions", json=payload, headers=headers)
+                resp.raise_for_status()
+                data = resp.json()
+
+            text = data["choices"][0]["message"]["content"]
+            parsed = json.loads(text)
+            _note_success()
+            return parsed
+        except httpx.HTTPStatusError as exc:
+            last_exc = exc
+            status = exc.response.status_code
+            if status in (429, 500, 502, 503, 504) and attempt < _AI_MAX_RETRIES:
+                await asyncio.sleep(_AI_BACKOFF_BASE_SECONDS * (2**attempt))
+                continue
+            _note_failure()
+            raise
+        except (httpx.TimeoutException, httpx.RequestError) as exc:
+            last_exc = exc
+            if attempt < _AI_MAX_RETRIES:
+                await asyncio.sleep(_AI_BACKOFF_BASE_SECONDS * (2**attempt))
+                continue
+            _note_failure()
+            raise RuntimeError("AI is temporarily unavailable. Please try again in a few moments.") from exc
+        except Exception as exc:
+            last_exc = exc
+            _note_failure()
+            raise RuntimeError("AI returned an invalid explanation format. Please try again.") from exc
+
+    _note_failure()
+    raise RuntimeError("AI is temporarily unavailable. Please try again in a few moments.") from last_exc
+

@@ -11,6 +11,7 @@ interface FeedbackPanelProps {
   output?: string;
   expectedOutput?: string | null;
   actualOutput?: string | null;
+  extraContent?: React.ReactNode;
   className?: string;
 }
 
@@ -21,6 +22,7 @@ const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
   output,
   expectedOutput,
   actualOutput,
+  extraContent,
   className
 }) => {
   const icons = {
@@ -73,6 +75,12 @@ const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
               <pre className="font-mono text-sm text-foreground whitespace-pre-wrap">
                 {output}
               </pre>
+            </div>
+          )}
+
+          {extraContent && (
+            <div className="mt-3">
+              {extraContent}
             </div>
           )}
         </div>

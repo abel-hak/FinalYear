@@ -20,7 +20,7 @@ import Mascot from '@/components/Mascot';
 import KnowledgeScroll from '@/components/KnowledgeScroll';
 import ErrorExplanation from '@/components/ErrorExplanation';
 import TimeoutNotification from '@/components/TimeoutNotification';
-import { fetchQuestDetail, submitQuestSolution, requestAiHint, fetchHintRemaining } from '@/api/backend';
+import { fetchQuestDetail, submitQuestSolution, requestAiHint, fetchHintRemaining, explainFailure } from '@/api/backend';
 
 // Static hint/concept metadata keyed by backend quest id (or fallback)
 const localQuestMeta: Record<
@@ -99,6 +99,13 @@ const QuestPage: React.FC = () => {
   const [output, setOutput] = useState('');
   const [expectedOutput, setExpectedOutput] = useState<string | null>(null);
   const [actualOutput, setActualOutput] = useState<string | null>(null);
+  const [failureExplanation, setFailureExplanation] = useState<{
+    what_it_does: string;
+    why_wrong: string;
+    next_action: string;
+  } | null>(null);
+  const [failureExplainLoading, setFailureExplainLoading] = useState(false);
+  const [failureExplainError, setFailureExplainError] = useState<string | null>(null);
   const [showConcept, setShowConcept] = useState(false);
   const [mascotMood, setMascotMood] = useState<MascotMood>('idle');
   const [mascotMessage, setMascotMessage] = useState<string>("");
@@ -227,9 +234,13 @@ const QuestPage: React.FC = () => {
         const firstFail = (result.test_results ?? []).find((t) => !t.passed && !t.is_hidden);
         setExpectedOutput(firstFail?.expected_output ?? null);
         setActualOutput(result.actual_output ?? null);
+        setFailureExplanation(null);
+        setFailureExplainError(null);
       } else {
         setExpectedOutput(null);
         setActualOutput(null);
+        setFailureExplanation(null);
+        setFailureExplainError(null);
       }
       setOutput((result.stdout || '') + (result.stderr || ''));
       setIsTimerRunning(false);
@@ -251,6 +262,8 @@ const QuestPage: React.FC = () => {
     setOutput('');
     setExpectedOutput(null);
     setActualOutput(null);
+    setFailureExplanation(null);
+    setFailureExplainError(null);
       setAiHints([]);
     setAiError(null);
     setShowConcept(false);
@@ -266,6 +279,26 @@ const QuestPage: React.FC = () => {
     setIsTimerRunning(true);
     setMascotMood('encouraging');
     setMascotMessage("Extra time granted! Let's do this!");
+  };
+
+  const handleExplainFailure = async () => {
+    if (!id || !expectedOutput || !actualOutput) return;
+    try {
+      setFailureExplainLoading(true);
+      setFailureExplainError(null);
+      const resp = await explainFailure({
+        quest_id: id,
+        code,
+        expected_output: expectedOutput,
+        actual_output: actualOutput,
+        stderr: output,
+      });
+      setFailureExplanation(resp);
+    } catch (e: any) {
+      setFailureExplainError(e.message ?? "AI explanation failed");
+    } finally {
+      setFailureExplainLoading(false);
+    }
   };
 
   const handleAskAiHint = async () => {
@@ -536,6 +569,30 @@ const QuestPage: React.FC = () => {
                   output={output}
                   expectedOutput={expectedOutput}
                   actualOutput={actualOutput}
+                  extraContent={
+                    expectedOutput && actualOutput ? (
+                      <div className="space-y-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleExplainFailure}
+                          disabled={failureExplainLoading}
+                        >
+                          {failureExplainLoading ? "Asking AI to explain..." : "Ask AI to explain this failure"}
+                        </Button>
+                        {failureExplainError && (
+                          <p className="text-xs text-red-400">{failureExplainError}</p>
+                        )}
+                        {failureExplanation && (
+                          <div className="p-4 rounded-lg border border-border bg-card space-y-2 text-sm">
+                            <p><span className="font-semibold">What your code does now:</span> {failureExplanation.what_it_does}</p>
+                            <p><span className="font-semibold">Why this is wrong:</span> {failureExplanation.why_wrong}</p>
+                            <p><span className="font-semibold">Next action:</span> {failureExplanation.next_action}</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : null
+                  }
                 />
                 {meta && (
                   <ErrorExplanation
