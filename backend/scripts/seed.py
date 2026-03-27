@@ -56,8 +56,9 @@ Session = sessionmaker(bind=engine)
 def seed():
     session = Session()
     try:
-        # Check if already seeded
-        if session.query(User).first():
+        # Check if already seeded (use Quest, not User – a manually registered
+        # user should not prevent the seed from populating quests)
+        if session.query(Quest).first():
             print("Data already present; skip seeding.")
             return
 
