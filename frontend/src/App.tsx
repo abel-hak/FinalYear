@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,7 +21,16 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 
 const queryClient = new QueryClient();
 
-const App = () => (
+const App = () => {
+  const [token, setToken] = useState<string | null>(getToken());
+
+  useEffect(() => {
+    const handleAuthChange = () => setToken(getToken());
+    window.addEventListener("auth-change", handleAuthChange);
+    return () => window.removeEventListener("auth-change", handleAuthChange);
+  }, []);
+
+  return (
   <ThemeProvider>
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -33,28 +43,28 @@ const App = () => (
           <Route path="/register" element={<Register />} />
           <Route
             path="/quests"
-            element={getToken() ? <Quests /> : <Navigate to="/login" replace />}
+            element={token ? <Quests /> : <Navigate to="/login" replace />}
           />
           <Route
             path="/quest/:id"
-            element={getToken() ? <QuestPage /> : <Navigate to="/login" replace />}
+            element={token ? <QuestPage /> : <Navigate to="/login" replace />}
           />
           <Route
             path="/achievements"
-            element={getToken() ? <Achievements /> : <Navigate to="/login" replace />}
+            element={token ? <Achievements /> : <Navigate to="/login" replace />}
           />
           <Route
             path="/leaderboard"
-            element={getToken() ? <Leaderboard /> : <Navigate to="/login" replace />}
+            element={token ? <Leaderboard /> : <Navigate to="/login" replace />}
           />
           <Route path="/learning-paths" element={<LearningPaths />} />
           <Route
             path="/learning-paths/:id"
-            element={getToken() ? <LearningPathDetail /> : <Navigate to="/login" replace />}
+            element={token ? <LearningPathDetail /> : <Navigate to="/login" replace />}
           />
           <Route
             path="/admin"
-            element={getToken() ? <AdminDashboard /> : <Navigate to="/login" replace />}
+            element={token ? <AdminDashboard /> : <Navigate to="/login" replace />}
           />
           <Route path="/faq" element={<FAQ />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
@@ -62,8 +72,9 @@ const App = () => (
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>
+    </QueryClientProvider>
   </ThemeProvider>
-);
+  );
+};
 
 export default App;

@@ -275,12 +275,14 @@ export function setAuth(token: string, role: "learner" | "admin"): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(ROLE_KEY, role);
+  window.dispatchEvent(new Event("auth-change"));
 }
 
 export function clearAuth(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(ROLE_KEY);
+  window.dispatchEvent(new Event("auth-change"));
 }
 
 export function getRole(): "learner" | "admin" | null {
