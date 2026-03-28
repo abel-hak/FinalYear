@@ -193,7 +193,23 @@ const Quests: React.FC = () => {
         
         {/* Quest Grid */}
         {loading ? (
-          <p className="text-muted-foreground">Loading quests...</p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="rounded-xl bg-card border border-border p-5 space-y-3 animate-pulse">
+                <div className="flex justify-between">
+                  <div className="h-5 w-20 rounded-full bg-muted" />
+                  <div className="h-5 w-14 rounded-full bg-muted" />
+                </div>
+                <div className="h-5 w-3/4 rounded bg-muted" />
+                <div className="h-4 w-full rounded bg-muted" />
+                <div className="h-4 w-2/3 rounded bg-muted" />
+                <div className="flex gap-2 pt-2">
+                  <div className="h-5 w-16 rounded-full bg-muted" />
+                  <div className="h-5 w-14 rounded-full bg-muted" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : error ? (
           <p className="text-red-500 text-sm">{error}</p>
         ) : (
