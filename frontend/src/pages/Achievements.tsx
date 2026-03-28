@@ -140,19 +140,20 @@ const Achievements: React.FC = () => {
           
           {/* Stats */}
           <div className="flex gap-4">
-            <div className="px-4 py-3 rounded-xl bg-card border border-border">
+            <div className="px-5 py-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                <Trophy className="w-4 h-4 text-gold" />
+                <Trophy className="w-4 h-4 text-primary" />
                 Unlocked
               </div>
               <div className="text-2xl font-bold text-foreground">
-                {unlockedCount}/{achievements.length || 0}
+                {unlockedCount}<span className="text-base font-normal text-muted-foreground">/{achievements.length || 0}</span>
               </div>
+              <ProgressBar value={unlockedCount} max={achievements.length || 1} size="sm" variant="gold" />
             </div>
-            <div className="px-4 py-3 rounded-xl bg-card border border-border">
+            <div className="px-5 py-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-yellow-500/5 border border-amber-500/20">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                <Sparkles className="w-4 h-4 text-gold" />
-                XP (from achievements)
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                XP Earned
               </div>
               <div className="text-2xl font-bold text-foreground">
                 {totalXPFromAchievements}
@@ -224,9 +225,9 @@ const AchievementCard: React.FC<{ achievement: Achievement }> = ({ achievement }
       <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-4 ${
         unlocked 
           ? `bg-gradient-to-br ${rarityColors[rarity]} text-white shadow-lg`
-          : 'bg-muted text-muted-foreground'
+          : `bg-gradient-to-br ${rarityColors[rarity]} text-white/40 shadow`
       }`}>
-        {unlocked ? achievement.icon : <Lock className="w-6 h-6" />}
+        {achievement.icon}
       </div>
       
       {/* Content */}
