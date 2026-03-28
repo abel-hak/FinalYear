@@ -218,14 +218,16 @@ export const PathManagement = () => {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-[88px] w-full rounded-xl bg-muted/40 animate-pulse" />
+          ))}
         </div>
       ) : (
         <div className="space-y-3">
           {paths.map((path) => (
             <motion.div key={path.id} layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-              <Card>
+              <Card className="hover:border-primary/40 transition-colors bg-secondary/10 hover:bg-secondary/20 group">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
                     <Button
@@ -238,8 +240,8 @@ export const PathManagement = () => {
                     </Button>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-1">
-                        <h3 className="font-medium truncate">{path.title}</h3>
-                        <Badge variant="outline" className="bg-primary/10 text-primary">
+                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors truncate">{path.title}</h3>
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                           Level {path.level}
                         </Badge>
                       </div>

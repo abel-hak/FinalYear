@@ -279,8 +279,10 @@ export const ContentManagement = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-24 w-full rounded-xl bg-muted/40 animate-pulse" />
+          ))}
         </div>
       ) : (
         <div className="space-y-3">
@@ -292,22 +294,28 @@ export const ContentManagement = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
             >
-              <Card>
-                <CardContent className="p-4">
+              <Card className="hover:border-primary/40 transition-colors bg-secondary/10 hover:bg-secondary/20 group">
+                <CardContent className="p-5">
                   <div className="flex items-center gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-1">
-                        <h3 className="font-medium truncate">{quest.title}</h3>
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors truncate">{quest.title}</h3>
                         <Badge
                           variant="outline"
-                          className={levelColor(quest.level)}
+                          className={`${levelColor(quest.level)} border-opacity-50`}
                         >
                           {levelLabel(quest.level)}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span>Order: {quest.order_rank}</span>
-                        <span>Level {quest.level}</span>
+                      <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <span className="w-4 h-4 rounded-full bg-primary/10 flex items-center justify-center text-[10px] text-primary">#</span>
+                          Order: {quest.order_rank}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-4 h-4 rounded-full bg-amber-500/10 flex items-center justify-center text-[10px] text-amber-500">L</span>
+                          Level {quest.level}
+                        </span>
                       </div>
                     </div>
 

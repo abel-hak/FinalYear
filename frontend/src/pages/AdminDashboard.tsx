@@ -34,18 +34,24 @@ const AdminDashboard = () => {
 
   const statCards = stats
     ? [
-        { label: 'Total Users', value: stats.total_users.toLocaleString(), icon: Users, color: 'text-blue-500' },
-        { label: 'Quests Completed', value: stats.quests_completed.toLocaleString(), icon: Trophy, color: 'text-yellow-500' },
-        { label: 'Total Quests', value: stats.total_quests.toLocaleString(), icon: FileText, color: 'text-green-500' },
-        { label: 'Completion Rate', value: `${stats.completion_rate_pct}%`, icon: Target, color: 'text-purple-500' },
+        { label: 'Total Users', value: stats.total_users.toLocaleString(), icon: Users, color: 'from-blue-500/20 to-cyan-500/20 text-cyan-400 border-cyan-500/30' },
+        { label: 'Quests Completed', value: stats.quests_completed.toLocaleString(), icon: Trophy, color: 'from-amber-500/20 to-yellow-500/20 text-yellow-400 border-yellow-500/30' },
+        { label: 'Total Quests', value: stats.total_quests.toLocaleString(), icon: FileText, color: 'from-emerald-500/20 to-green-500/20 text-green-400 border-green-500/30' },
+        { label: 'Completion Rate', value: `${stats.completion_rate_pct}%`, icon: Target, color: 'from-purple-500/20 to-pink-500/20 text-pink-400 border-pink-500/30' },
       ]
     : [];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Background glow effects */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/4 left-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 right-0 w-[500px] h-[500px] bg-pink-500/5 rounded-full blur-[120px]" />
+      </div>
+
       <Header />
       
-      <main className="container mx-auto px-4 py-8 max-w-7xl">
+      <main className="container mx-auto px-4 py-8 max-w-7xl relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -73,14 +79,17 @@ const AdminDashboard = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <stat.icon className={`w-8 h-8 ${stat.color}`} />
+                  <Card className={`relative overflow-hidden border ${stat.color.split(' ').find(c => c.startsWith('border-')) || 'border-border'} bg-card/50 backdrop-blur-xl hover:-translate-y-1 transition-all duration-300`}>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${stat.color.split(' ').filter(c => c.startsWith('from-') || c.startsWith('to-')).join(' ')} opacity-50`} />
+                    <CardContent className="p-6 relative z-10">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className={`p-3 rounded-xl bg-background/50 backdrop-blur-sm border border-white/5`}>
+                          <stat.icon className={`w-6 h-6 ${stat.color.split(' ').find(c => c.startsWith('text-') && !c.includes('/')) || ''}`} />
+                        </div>
                       </div>
-                      <div className="mt-4">
-                        <p className="text-2xl font-bold">{stat.value}</p>
-                        <p className="text-sm text-muted-foreground">{stat.label}</p>
+                      <div>
+                        <p className="text-3xl font-bold tracking-tight text-white mb-1">{stat.value}</p>
+                        <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -110,32 +119,38 @@ const AdminDashboard = () => {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="users" className="space-y-4">
-              <Card>
+            <TabsContent value="users" className="space-y-4 focus-visible:outline-none">
+              <Card className="bg-card/50 backdrop-blur-xl border-border/50 shadow-xl">
                 <CardContent className="p-6">
-                  <h2 className="text-xl font-semibold mb-4">User Progress</h2>
+                  <h2 className="text-xl font-semibold mb-4 text-foreground">User Progress</h2>
                   <UserProgressTable />
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="analytics" className="space-y-4">
+            <TabsContent value="analytics" className="space-y-4 focus-visible:outline-none">
               <QuestAnalytics />
             </TabsContent>
 
-            <TabsContent value="content" className="space-y-4">
-              <Card>
+            <TabsContent value="content" className="space-y-4 focus-visible:outline-none">
+              <Card className="bg-card/50 backdrop-blur-xl border-border/50 shadow-xl">
                 <CardContent className="p-6">
-                  <h2 className="text-xl font-semibold mb-4">Quest Management</h2>
+                  <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-foreground">
+                    <FileText className="w-5 h-5 text-primary" />
+                    Quest Management
+                  </h2>
                   <ContentManagement />
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="paths" className="space-y-4">
-              <Card>
+            <TabsContent value="paths" className="space-y-4 focus-visible:outline-none">
+              <Card className="bg-card/50 backdrop-blur-xl border-border/50 shadow-xl">
                 <CardContent className="p-6">
-                  <h2 className="text-xl font-semibold mb-4">Learning Paths</h2>
+                  <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-foreground">
+                    <BookOpen className="w-5 h-5 text-primary" />
+                    Learning Paths
+                  </h2>
                   <PathManagement />
                 </CardContent>
               </Card>
