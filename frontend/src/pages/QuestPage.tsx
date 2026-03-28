@@ -333,15 +333,26 @@ const QuestPage: React.FC = () => {
       <Header />
 
       {loading ? (
-        <div className="container py-20 text-center">
-          <p className="text-muted-foreground">Loading quest...</p>
+        <div className="container py-8">
+          {/* Skeleton loader */}
+          <div className="h-5 w-24 rounded-full bg-muted animate-pulse mb-6" />
+          <div className="h-8 w-64 rounded-lg bg-muted animate-pulse mb-3" />
+          <div className="h-4 w-96 rounded bg-muted animate-pulse mb-8" />
+          <div className="grid lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 h-80 rounded-xl bg-muted animate-pulse" />
+            <div className="h-48 rounded-xl bg-muted animate-pulse" />
+          </div>
         </div>
       ) : loadError ? (
         <div className="container py-20 text-center">
-          <p className="text-red-500 text-sm mb-4">{loadError}</p>
-          <Link to="/quests">
-            <Button variant="outline">Back to Quests</Button>
-          </Link>
+          <div className="inline-flex flex-col items-center gap-4 p-8 rounded-2xl bg-card border border-border max-w-sm">
+            <XCircle className="w-12 h-12 text-red-400" />
+            <p className="text-foreground font-semibold">Couldn't load quest</p>
+            <p className="text-sm text-muted-foreground">{loadError}</p>
+            <Link to="/quests">
+              <Button variant="outline" className="gap-2"><ChevronLeft className="w-4 h-4" />Back to Quests</Button>
+            </Link>
+          </div>
         </div>
       ) : (
         <>
@@ -396,37 +407,31 @@ const QuestPage: React.FC = () => {
         </div>
         
         {/* Quest Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            {meta && (
-              <div className="flex items-center gap-3 mb-2">
-                <Badge
-                  variant={
-                    meta.difficulty === 'beginner'
-                      ? 'success'
-                      : meta.difficulty === 'intermediate'
-                      ? 'warning'
-                      : 'destructive'
-                  }
-                >
-                  {meta.difficulty}
-                </Badge>
-                <Badge variant="outline">{meta.category}</Badge>
-              </div>
-            )}
+            <div className="flex items-center gap-2 mb-2">
+              <Badge
+                variant={
+                  questLevel <= 1 ? 'success' : questLevel === 2 ? 'warning' : 'destructive'
+                }
+              >
+                {questLevel <= 1 ? 'Beginner' : questLevel === 2 ? 'Intermediate' : 'Advanced'}
+              </Badge>
+              {questTags.slice(0, 2).map((tag) => (
+                <Badge key={tag} variant="outline" className="capitalize">{tag}</Badge>
+              ))}
+            </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               {title}
             </h1>
           </div>
-          {meta && (
-            <Badge variant="gold" className="flex items-center gap-2 text-base px-4 py-2">
-              <Sparkles className="w-4 h-4" />
-              {meta.xp} XP
-            </Badge>
-          )}
+          <Badge variant="gold" className="flex items-center gap-2 text-base px-4 py-2 shrink-0">
+            <Sparkles className="w-4 h-4" />
+            {questLevel <= 1 ? 50 : questLevel === 2 ? 75 : 100} XP
+          </Badge>
         </div>
         
-        <p className="text-muted-foreground mb-8 max-w-3xl">
+        <p className="text-muted-foreground mb-6 max-w-3xl">
           {description}
         </p>
         
