@@ -96,8 +96,26 @@ export const UserProgressTable = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        <div className="space-y-4">
+          <div className="hidden md:block rounded-lg border bg-card overflow-hidden">
+            <div className="h-12 border-b border-border bg-muted/20" />
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center h-16 border-b border-border/50 px-4 gap-4 animate-pulse bg-card/50">
+                <div className="w-8 h-8 rounded-full bg-muted" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-24 bg-muted rounded" />
+                  <div className="h-3 w-32 bg-muted rounded" />
+                </div>
+                <div className="w-32 h-2 bg-muted rounded-full" />
+                <div className="w-16 h-4 bg-muted rounded" />
+              </div>
+            ))}
+          </div>
+          <div className="md:hidden space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 rounded-lg border bg-card p-4 animate-pulse" />
+            ))}
+          </div>
         </div>
       ) : (
         <>
@@ -117,36 +135,36 @@ export const UserProgressTable = () => {
                 {filteredUsers.map((user) => {
                   const pct = user.total_quests > 0 ? (user.quests_completed / user.total_quests) * 100 : 0;
                   return (
-                    <TableRow key={user.id}>
+                    <TableRow key={user.id} className="hover:bg-primary/5 transition-colors border-border/50">
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <Avatar className="w-8 h-8">
-                            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                          <Avatar className="w-8 h-8 ring-2 ring-primary/20">
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                               {user.username.slice(0, 2).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium text-sm">{user.username}</p>
+                            <p className="font-medium text-sm text-foreground">{user.username}</p>
                             <p className="text-xs text-muted-foreground">{user.email}</p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
+                        <div className="space-y-1.5 w-[200px]">
                           <div className="flex justify-between text-xs">
-                            <span>{user.quests_completed}/{user.total_quests} quests</span>
-                            <span>{Math.round(pct)}%</span>
+                            <span className="text-muted-foreground">{user.quests_completed}/{user.total_quests} quests</span>
+                            <span className="font-medium">{Math.round(pct)}%</span>
                           </div>
-                          <Progress value={pct} className="h-2" />
+                          <Progress value={pct} className="h-2 bg-secondary" />
                         </div>
                       </TableCell>
-                      <TableCell className="text-right font-medium">{user.xp_earned.toLocaleString()}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{formatLastActive(user.last_active)}</TableCell>
+                      <TableCell className="text-right font-medium text-amber-500">{user.xp_earned.toLocaleString()}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground font-mono">{formatLastActive(user.last_active)}</TableCell>
                       <TableCell>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
                           onClick={() => setRemoveTarget(user)}
                           title="Remove learner"
                         >

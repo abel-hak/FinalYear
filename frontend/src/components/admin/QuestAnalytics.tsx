@@ -41,8 +41,10 @@ export const QuestAnalytics = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      <div className="grid gap-6 md:grid-cols-2">
+        <div className="h-[350px] rounded-xl bg-card/50 backdrop-blur-xl border border-border/50 animate-pulse" />
+        <div className="h-[350px] rounded-xl bg-card/50 backdrop-blur-xl border border-border/50 animate-pulse" />
+        <div className="md:col-span-2 h-[350px] rounded-xl bg-card/50 backdrop-blur-xl border border-border/50 animate-pulse" />
       </div>
     );
   }
@@ -83,7 +85,7 @@ export const QuestAnalytics = () => {
   return (
     <div className="grid gap-6 md:grid-cols-2">
       {/* Quest Completion Rate */}
-      <Card>
+      <Card className="bg-card/50 backdrop-blur-xl border-border/50 shadow-xl transition-all hover:bg-card/60">
         <CardHeader>
           <CardTitle className="text-lg">Quest Completion Rate</CardTitle>
         </CardHeader>
@@ -102,7 +104,7 @@ export const QuestAnalytics = () => {
       </Card>
 
       {/* Difficulty Distribution */}
-      <Card>
+      <Card className="bg-card/50 backdrop-blur-xl border-border/50 shadow-xl transition-all hover:bg-card/60">
         <CardHeader>
           <CardTitle className="text-lg">Quest Difficulty Distribution</CardTitle>
         </CardHeader>
@@ -143,7 +145,7 @@ export const QuestAnalytics = () => {
       </Card>
 
       {/* Weekly Activity */}
-      <Card className="md:col-span-2">
+      <Card className="md:col-span-2 bg-card/50 backdrop-blur-xl border-border/50 shadow-xl transition-all hover:bg-card/60">
         <CardHeader>
           <CardTitle className="text-lg">Weekly Activity</CardTitle>
         </CardHeader>
