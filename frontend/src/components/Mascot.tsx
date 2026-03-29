@@ -161,10 +161,10 @@ const Mascot: React.FC<MascotProps> = ({
             initial={{ opacity: 0, y: 10, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.9 }}
-            className="absolute -top-16 left-1/2 -translate-x-1/2 bg-card border border-border rounded-xl px-4 py-2 text-sm text-foreground whitespace-nowrap shadow-lg z-10"
+            className="absolute -top-16 right-0 origin-bottom-right bg-card border border-border rounded-xl px-4 py-2 text-sm text-foreground whitespace-nowrap shadow-lg z-10"
           >
             {currentMessage}
-            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-card border-r border-b border-border rotate-45" />
+            <div className="absolute -bottom-2 right-10 w-4 h-4 bg-card border-r border-b border-border rotate-45" />
           </motion.div>
         )}
       </AnimatePresence>
