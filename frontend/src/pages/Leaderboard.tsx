@@ -109,20 +109,20 @@ const Leaderboard: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16">
+          <div className="flex items-center justify-center py-16 max-w-4xl">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
         ) : error ? (
-          <p className="text-destructive text-center py-8">{error}</p>
+          <p className="text-destructive text-center py-8 max-w-4xl">{error}</p>
         ) : entries.length === 0 ? (
-          <Card>
+          <Card className="max-w-4xl">
             <CardContent className="py-12 text-center text-muted-foreground">
               <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No one on the leaderboard yet. Be the first to complete a quest!</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 max-w-4xl">
             {/* Your rank card */}
             {me && (
               <Card className="border-primary/50 bg-gradient-to-r from-primary/10 to-primary/5">

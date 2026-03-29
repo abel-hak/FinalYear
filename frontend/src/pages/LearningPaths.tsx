@@ -58,7 +58,7 @@ const LearningPaths: React.FC = () => {
 
         {loading ? (
           /* Skeleton loaders */
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-48 rounded-2xl bg-card border border-border animate-pulse" />
             ))}
@@ -69,7 +69,7 @@ const LearningPaths: React.FC = () => {
             <p>No learning paths yet. Check back later!</p>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {paths.map((path) => {
               const unlocked = path.unlocked !== false;
               const gradient = levelGradients[path.level] ?? levelGradients[1];
