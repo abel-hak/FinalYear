@@ -84,7 +84,7 @@ const Leaderboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="container py-8 max-w-4xl">
+      <main className="container py-8 max-w-7xl">
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">
             Leaderboard
