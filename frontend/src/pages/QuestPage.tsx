@@ -21,6 +21,70 @@ import KnowledgeScroll from '@/components/KnowledgeScroll';
 import ErrorExplanation from '@/components/ErrorExplanation';
 import TimeoutNotification from '@/components/TimeoutNotification';
 import { fetchQuestDetail, submitQuestSolution, requestAiHint, fetchHintRemaining, explainFailure } from '@/api/backend';
+import confetti from 'canvas-confetti';
+
+const playSuccessSound = () => {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    const audioCtx = new AudioContext();
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    osc.type = 'sine';
+    const now = audioCtx.currentTime;
+    
+    // Quick C major arpeggio
+    osc.frequency.setValueAtTime(523.25, now);
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(0.3, now + 0.05);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    
+    osc.frequency.setValueAtTime(659.25, now + 0.15);
+    gainNode.gain.setValueAtTime(0.3, now + 0.15);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    
+    osc.frequency.setValueAtTime(783.99, now + 0.3);
+    gainNode.gain.setValueAtTime(0.3, now + 0.3);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+    
+    osc.start(now);
+    osc.stop(now + 0.8);
+  } catch (e) {
+    // Ignore audio errors
+  }
+};
+
+const playErrorSound = () => {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContext) return;
+    const audioCtx = new AudioContext();
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    osc.type = 'sawtooth';
+    const now = audioCtx.currentTime;
+    
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+    
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(0.2, now + 0.05);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    
+    osc.start(now);
+    osc.stop(now + 0.3);
+  } catch (e) {
+    // Ignore audio errors
+  }
+};
 
 // Static hint/concept metadata keyed by backend quest id (or fallback)
 const localQuestMeta: Record<
@@ -216,6 +280,13 @@ const QuestPage: React.FC = () => {
       const result = await submitQuestSolution(id, code);
       if (result.passed) {
         setFeedback('success');
+        playSuccessSound();
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#a855f7', '#ec4899', '#eab308']
+        });
         // Refresh quest detail so navigation updates (next quest becomes unlocked/current).
         try {
           const q = await fetchQuestDetail(id);
@@ -228,6 +299,7 @@ const QuestPage: React.FC = () => {
         }
       } else {
         setFeedback('error');
+        playErrorSound();
       }
       // Show expected vs actual on failure (first non-hidden failing test case)
       if (!result.passed) {
