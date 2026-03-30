@@ -29,6 +29,8 @@ const TimeoutNotification: React.FC<TimeoutNotificationProps> = ({
   const [timeRemaining, setTimeRemaining] = useState(timeLimit);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationType, setNotificationType] = useState<'warning' | 'critical' | 'timeout'>('warning');
+  const [hasShownWarning, setHasShownWarning] = useState(false);
+  const [hasShownCritical, setHasShownCritical] = useState(false);
 
   const percentageRemaining = (timeRemaining / timeLimit) * 100;
 
@@ -51,14 +53,16 @@ const TimeoutNotification: React.FC<TimeoutNotificationProps> = ({
   }, [isPaused, onTimeout]);
 
   useEffect(() => {
-    if (percentageRemaining <= criticalThreshold && percentageRemaining > 0) {
+    if (percentageRemaining <= criticalThreshold && percentageRemaining > 0 && !hasShownCritical) {
       setNotificationType('critical');
       setShowNotification(true);
-    } else if (percentageRemaining <= warningThreshold && percentageRemaining > criticalThreshold) {
+      setHasShownCritical(true);
+    } else if (percentageRemaining <= warningThreshold && percentageRemaining > criticalThreshold && !hasShownWarning) {
       setNotificationType('warning');
       setShowNotification(true);
+      setHasShownWarning(true);
     }
-  }, [percentageRemaining, warningThreshold, criticalThreshold]);
+  }, [percentageRemaining, warningThreshold, criticalThreshold, hasShownCritical, hasShownWarning]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -244,7 +248,13 @@ const TimeoutNotification: React.FC<TimeoutNotificationProps> = ({
                   ) : (
                     <>
                       {onExtend && (
-                        <Button variant="outline" onClick={onExtend}>
+                        <Button variant="outline" onClick={() => {
+                          setTimeRemaining(prev => prev + 60);
+                          setShowNotification(false);
+                          setHasShownWarning(false);
+                          setHasShownCritical(false);
+                          onExtend();
+                        }}>
                           <Clock className="w-4 h-4 mr-2" />
                           Add Time
                         </Button>
