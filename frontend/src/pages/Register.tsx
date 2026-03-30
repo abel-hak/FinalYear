@@ -13,7 +13,6 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [role, setRole] = useState<"learner" | "admin">("learner");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,7 +21,7 @@ const Register = () => {
     setError(null);
     setLoading(true);
     try {
-      await register({ username, email, password, role });
+      await register({ username, email, password, role: "learner" });
       toast({
         title: "Account created!",
         description: "You can now sign in with your credentials.",
@@ -107,42 +106,6 @@ const Register = () => {
               </div>
             </div>
 
-            {/* Role selector - styled buttons instead of raw select */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">I want to join as</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                    role === "learner"
-                      ? "border-primary bg-primary/10 shadow-md shadow-primary/10"
-                      : "border-border bg-card/50 hover:border-muted-foreground/30"
-                  }`}
-                  onClick={() => setRole("learner")}
-                >
-                  <GraduationCap className={`w-6 h-6 ${role === "learner" ? "text-primary" : "text-muted-foreground"}`} />
-                  <span className={`text-sm font-medium ${role === "learner" ? "text-primary" : "text-muted-foreground"}`}>
-                    Learner
-                  </span>
-                  <span className="text-xs text-muted-foreground text-center">Solve quests & level up</span>
-                </button>
-                <button
-                  type="button"
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                    role === "admin"
-                      ? "border-primary bg-primary/10 shadow-md shadow-primary/10"
-                      : "border-border bg-card/50 hover:border-muted-foreground/30"
-                  }`}
-                  onClick={() => setRole("admin")}
-                >
-                  <Shield className={`w-6 h-6 ${role === "admin" ? "text-primary" : "text-muted-foreground"}`} />
-                  <span className={`text-sm font-medium ${role === "admin" ? "text-primary" : "text-muted-foreground"}`}>
-                    Admin
-                  </span>
-                  <span className="text-xs text-muted-foreground text-center">Manage content</span>
-                </button>
-              </div>
-            </div>
 
             {error && (
               <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3">
