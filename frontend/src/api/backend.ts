@@ -30,6 +30,7 @@ export interface LearningPathSummaryDto {
   level: number;
   order_rank: number;
   quest_count: number;
+  completed_count?: number;
   unlocked?: boolean;
 }
 

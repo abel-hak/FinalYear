@@ -23,6 +23,7 @@ class LearningPathSummary(BaseModel):
     level: int  # 1=Beginner, 2=Intermediate, 3=Advanced
     order_rank: int
     quest_count: int
+    completed_count: int = 0
     unlocked: bool = True  # Level 1 always; Level N when Level N-1 path is complete
 
 

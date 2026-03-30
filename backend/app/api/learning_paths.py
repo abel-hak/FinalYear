@@ -82,6 +82,9 @@ async def list_learning_paths(
                 prev_quest_ids = _quest_ids_for_path(prev_paths[0])
                 unlocked = prev_quest_ids.issubset(completed_ids) if prev_quest_ids else True
 
+        path_quest_ids = _quest_ids_for_path(p)
+        completed_in_path = len(path_quest_ids.intersection(completed_ids)) if path_quest_ids else 0
+
         summaries.append(
             LearningPathSummary(
                 id=str(p.id),
@@ -90,6 +93,7 @@ async def list_learning_paths(
                 level=level,
                 order_rank=p.order_rank,
                 quest_count=len(p.path_quests),
+                completed_count=completed_in_path,
                 unlocked=unlocked,
             )
         )
