@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Flame, Trophy, Sparkles, Loader2, Calendar, Crown, Medal, Award } from "lucide-react";
 import { fetchLeaderboard, type LeaderboardEntryDto, type LeaderboardPeriod } from "@/api/backend";
+import { getPlayerTitle } from "@/lib/utils";
 
 const periodLabels: Record<LeaderboardPeriod, string> = {
   all: "All Time",
@@ -132,7 +133,12 @@ const Leaderboard: React.FC = () => {
                       {getInitials(me.username)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-lg truncate">You ({me.username})</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-lg truncate">You ({me.username})</p>
+                        <Badge variant="outline" className={`${getPlayerTitle(me.total_points).color.replace('text-', 'border-').split(' ')[0]} ${getPlayerTitle(me.total_points).color} bg-background/50`}>
+                          {getPlayerTitle(me.total_points).title}
+                        </Badge>
+                      </div>
                       <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <Sparkles className="w-3.5 h-3.5 text-primary" />
@@ -181,6 +187,9 @@ const Leaderboard: React.FC = () => {
                           )}
                         </div>
                         <p className="font-semibold truncate">{entry.username}</p>
+                        <p className={`text-xs ${getPlayerTitle(entry.total_points).color}`}>
+                          {getPlayerTitle(entry.total_points).title}
+                        </p>
                         <div className="flex items-center justify-center gap-1 mt-1">
                           <Sparkles className="w-4 h-4 text-primary" />
                           <span className="text-lg font-bold text-foreground">{entry.total_points} XP</span>
@@ -218,7 +227,12 @@ const Leaderboard: React.FC = () => {
                           {getInitials(entry.username)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold truncate">{entry.username}</p>
+                          <p className="font-semibold truncate">
+                            {entry.username}
+                            <span className={`ml-2 text-xs ${getPlayerTitle(entry.total_points).color}`}>
+                              • {getPlayerTitle(entry.total_points).title}
+                            </span>
+                          </p>
                           <div className="flex items-center gap-3 mt-0.5 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1">
                               <Sparkles className="w-3.5 h-3.5" />
