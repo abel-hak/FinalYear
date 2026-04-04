@@ -30,9 +30,9 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 database_url = os.environ.get("DATABASE_URL_SYNC") or os.environ.get("DATABASE_URL", "").replace(
-    "postgresql+asyncpg://", "postgresql://", 1
+    "postgresql+asyncpg://", "postgresql+psycopg://", 1
 )
-if not database_url or database_url == "postgresql://user:password@localhost:5432/codequest":
+if not database_url or database_url == "postgresql+psycopg://user:password@localhost:5432/codequest":
     print("Set DATABASE_URL or DATABASE_URL_SYNC in .env")
     sys.exit(1)
 

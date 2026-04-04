@@ -25,7 +25,7 @@ settings = get_settings()
 sync_url = (
     settings.database_url_sync
     if settings.database_url_sync
-    else settings.database_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    else settings.database_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
 )
 config.set_main_option("sqlalchemy.url", sync_url)
 

@@ -60,11 +60,14 @@ Each challenge is a *quest* with:
 
 - **Node.js** 18+
 - **Python** 3.11+
-- **PostgreSQL** 14+
+- **Docker** + **Docker Compose**
 
 ### 3.2 Backend
 
 ```bash
+# from project root, start only the database service
+docker compose up -d postgres
+
 cd backend
 python -m venv venv
 
@@ -76,15 +79,26 @@ venv\Scripts\activate
 pip install -r requirements.txt
 
 cp .env.example .env
-# Edit .env: set DATABASE_URL and DATABASE_URL_SYNC to your PostgreSQL URL
+# Edit .env: set DATABASE_URL and DATABASE_URL_SYNC
 # Example:
-#   DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/codequest
-#   DATABASE_URL_SYNC=postgresql://user:pass@localhost:5432/codequest
+#   DATABASE_URL=postgresql+asyncpg://codequest:codequest@localhost:5432/codequest
+#   DATABASE_URL_SYNC=postgresql+psycopg://codequest:codequest@localhost:5432/codequest
 
 alembic upgrade head
 python -m scripts.seed
 
 uvicorn app.main:app --reload --port 8000
+```
+
+Optional checks and teardown:
+
+```bash
+# check DB health/logs
+docker compose ps
+docker compose logs -f postgres
+
+# stop services when done
+docker compose down
 ```
 
 - API: `http://localhost:8000`

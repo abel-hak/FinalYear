@@ -6,10 +6,10 @@ fastapi==0.109.2
 uvicorn[standard]==0.27.1
 
 # Database
-sqlalchemy[asyncio]==2.0.25
-asyncpg==0.29.0
-psycopg2-binary==2.9.9
-alembic==1.13.1
+sqlalchemy[asyncio]==2.0.48
+asyncpg==0.31.0
+psycopg[binary]>=3.2,<3.3
+alembic==1.18.4
 
 # Auth & security
 python-jose[cryptography]==3.3.0

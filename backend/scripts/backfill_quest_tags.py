@@ -17,7 +17,7 @@ if env_path.exists():
 from sqlalchemy import create_engine, text
 
 url = os.environ.get("DATABASE_URL_SYNC") or os.environ.get("DATABASE_URL", "").replace(
-    "postgresql+asyncpg://", "postgresql://", 1
+    "postgresql+asyncpg://", "postgresql+psycopg://", 1
 )
 engine = create_engine(url)
 with engine.begin() as conn:

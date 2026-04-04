@@ -21,14 +21,14 @@ def get_async_engine():
 
 
 def get_sync_url() -> str:
-    """Return sync PostgreSQL URL for Alembic (postgresql://...)."""
+    """Return sync PostgreSQL URL for Alembic (postgresql+psycopg://...)."""
     settings = get_settings()
     if settings.database_url_sync:
         return settings.database_url_sync
-    # Convert asyncpg URL to psycopg2-style for Alembic
+    # Convert asyncpg URL to psycopg-style for Alembic
     url = settings.database_url
     if url.startswith("postgresql+asyncpg://"):
-        return url.replace("postgresql+asyncpg://", "postgresql://", 1)
+        return url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
     return url
 
 
