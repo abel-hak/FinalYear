@@ -17,5 +17,24 @@ services:
       timeout: 5s
       retries: 5
 
+  postgres_test:
+    image: postgres:16-alpine
+    container_name: codequest-postgres-test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: codequest_test
+      POSTGRES_PASSWORD: codequest_test
+      POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U codequest_test -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
+  postgres_test_data:

@@ -159,9 +159,21 @@ FinalYear/
 ## 5. Running Tests
 
 ```bash
+# from project root: start dedicated test postgres
+docker compose up -d postgres_test
+
 cd backend
+# optional first-time setup for test DB credentials
+cp .env.test.example .env.test
+
 pytest -q
 ```
+
+Test DB notes:
+
+- Pytest uses `postgres_test` on port `5433` (not the dev DB on `5432`).
+- Each test creates a fresh temporary database, seeds it, and drops it after the test finishes.
+- Test connection templates and admin credentials are configured in `backend/.env.test`.
 
 Tests cover: auth flows, quest submission, rate limiting, sandbox timeouts, AI hints, admin actions.
 
