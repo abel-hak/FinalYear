@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.learner_repository import LearnerRepository
 from app.repositories.progress_repository import ProgressRepository
-from app.schemas.progress import ProgressSummary
+from app.schemas.progress import ProgressSummary, ReviewSuggestion
 from app.schemas.quest import QuestDetail, QuestSummary
 
 
@@ -131,3 +132,31 @@ class LearnerProgressService:
             prev_id=prev_id,
             next_id=next_id,
         )
+
+    async def get_review_suggestions_for_user(self, user_id, review_interval_days: int = 7) -> list[ReviewSuggestion]:
+        learner = await self.learner_repo.get_active_by_user_id(user_id)
+        if not learner:
+            return []
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=review_interval_days)
+        rows = await self.progress_repo.list_review_candidates_for_learner(learner.id, cutoff)
+
+        now = datetime.now(timezone.utc)
+        suggestions: list[ReviewSuggestion] = []
+        for quest, last_passed in rows:
+            if not last_passed:
+                continue
+            delta = now - last_passed
+            suggestions.append(
+                ReviewSuggestion(
+                    id=str(quest.id),
+                    title=quest.title,
+                    description=quest.description,
+                    level=quest.level,
+                    order_rank=quest.order_rank,
+                    tags=quest.tags if quest.tags else [],
+                    last_completed_at=last_passed.isoformat(),
+                    days_since_completion=max(0, delta.days),
+                )
+            )
+        return suggestions

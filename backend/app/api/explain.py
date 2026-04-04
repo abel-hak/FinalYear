@@ -4,14 +4,17 @@ AI-powered explanation for failed submissions.
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
 from app.db.session import get_db
 from app.core.security import get_current_learner
 from app.core.ai import generate_failure_explanation
-from app.models.quest import Quest
 from app.models.user import User
 from app.schemas.explain import ExplainFailureRequest, ExplainFailureResponse
+from app.services.explain_service import (
+    ExplainQuestNotFoundError,
+    ExplainService,
+    ExplainUnavailableError,
+)
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
@@ -21,32 +24,17 @@ async def explain_failure(
     current_user: User = Depends(get_current_learner),
     db: AsyncSession = Depends(get_db),
 ) -> ExplainFailureResponse:
-    # Ensure quest exists
-    result = await db.execute(
-        select(Quest).where(Quest.id == payload.quest_id, Quest.is_deleted.is_(False))
-    )
-    quest = result.scalar_one_or_none()
-    if not quest:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quest not found")
-
+    service = ExplainService(db)
     try:
-        data = await generate_failure_explanation(
-            quest_title=quest.title,
-            quest_description=quest.description,
-            learner_code=payload.code,
-            expected_output=payload.expected_output,
-            actual_output=payload.actual_output,
-            stderr=payload.stderr,
+        return await service.explain_failure(
+            payload=payload,
+            explain_fn=generate_failure_explanation,
         )
-    except RuntimeError as exc:
+    except ExplainQuestNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
+    except ExplainUnavailableError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
+            detail=exc.message,
         ) from exc
-
-    return ExplainFailureResponse(
-        what_it_does=str(data.get("what_it_does", "")).strip() or "Explanation not available.",
-        why_wrong=str(data.get("why_wrong", "")).strip() or "Explanation not available.",
-        next_action=str(data.get("next_action", "")).strip() or "Try checking the lines around the reported mismatch.",
-    )
 

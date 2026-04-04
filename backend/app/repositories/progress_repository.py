@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,3 +54,32 @@ class ProgressRepository:
             .limit(1)
         )
         return result.scalar_one_or_none() is not None
+
+    async def list_review_candidates_for_learner(self, learner_id, cutoff: datetime):
+        # Last passed submission per quest, filtered by spacing interval.
+        subq = (
+            select(
+                Submission.quest_id,
+                Submission.created_at.label("last_passed"),
+            )
+            .where(
+                Submission.learner_id == learner_id,
+                Submission.passed.is_(True),
+                Submission.created_at <= cutoff,
+            )
+            .distinct(Submission.quest_id)
+            .order_by(Submission.quest_id, Submission.created_at.desc())
+        ).subquery()
+
+        result = await self.db.execute(
+            select(Quest, subq.c.last_passed)
+            .join(subq, Quest.id == subq.c.quest_id)
+            .where(Quest.is_deleted.is_(False))
+            .order_by(subq.c.last_passed.asc())
+        )
+        rows = []
+        for quest, last_passed in result.all():
+            if last_passed and last_passed.tzinfo is None:
+                last_passed = last_passed.replace(tzinfo=timezone.utc)
+            rows.append((quest, last_passed))
+        return rows

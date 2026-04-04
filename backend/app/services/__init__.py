@@ -13,6 +13,11 @@ from app.services.admin_service import (
     AdminValidationError,
 )
 from app.services.achievement_service import AchievementService
+from app.services.explain_service import (
+    ExplainQuestNotFoundError,
+    ExplainService,
+    ExplainUnavailableError,
+)
 from app.services.hint_service import (
     HintLearnerRequiredError,
     HintLimitExceededError,
@@ -44,6 +49,9 @@ __all__ = [
     "AuthRateLimitError",
     "AuthService",
     "AchievementService",
+    "ExplainQuestNotFoundError",
+    "ExplainService",
+    "ExplainUnavailableError",
     "HintLearnerRequiredError",
     "HintLimitExceededError",
     "HintQuestNotFoundError",
