@@ -6,8 +6,10 @@ from datetime import datetime, timezone
 
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.learner import Learner
+from app.models.learning_path import LearningPath, LearningPathQuest
 from app.models.quest import Quest
 from app.models.submission import Submission
 from app.models.user import User
@@ -113,4 +115,82 @@ class AdminRepository:
             learner.deleted_at = now
             learner.deleted_by = admin_id
 
+        await self.db.commit()
+
+    async def list_learning_paths_with_quests(self) -> list[LearningPath]:
+        result = await self.db.execute(
+            select(LearningPath)
+            .options(selectinload(LearningPath.path_quests))
+            .order_by(LearningPath.level, LearningPath.order_rank)
+        )
+        return list(result.scalars().all())
+
+    async def create_learning_path(self, *, payload) -> LearningPath:
+        path = LearningPath(
+            title=payload.title,
+            description=payload.description,
+            level=payload.level,
+            order_rank=payload.order_rank,
+        )
+        self.db.add(path)
+        await self.db.commit()
+        await self.db.refresh(path)
+        return path
+
+    async def get_learning_path_with_quests(self, path_id) -> LearningPath | None:
+        result = await self.db.execute(
+            select(LearningPath)
+            .options(selectinload(LearningPath.path_quests))
+            .where(LearningPath.id == path_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def update_learning_path(self, *, path: LearningPath, updates: dict) -> LearningPath:
+        for field, value in updates.items():
+            setattr(path, field, value)
+        await self.db.commit()
+        await self.db.refresh(path)
+        return path
+
+    async def delete_learning_path(self, *, path: LearningPath) -> None:
+        await self.db.delete(path)
+        await self.db.commit()
+
+    async def list_learning_path_quests(self, path_id):
+        result = await self.db.execute(
+            select(LearningPathQuest, Quest)
+            .join(Quest, Quest.id == LearningPathQuest.quest_id)
+            .where(LearningPathQuest.path_id == path_id, Quest.is_deleted.is_(False))
+            .order_by(LearningPathQuest.order_rank)
+        )
+        return result.all()
+
+    async def get_active_quest(self, quest_id) -> Quest | None:
+        result = await self.db.execute(
+            select(Quest).where(Quest.id == quest_id, Quest.is_deleted.is_(False))
+        )
+        return result.scalar_one_or_none()
+
+    async def add_learning_path_quest(self, *, path_id, quest_id, order_rank: int) -> LearningPathQuest:
+        pq = LearningPathQuest(
+            path_id=path_id,
+            quest_id=quest_id,
+            order_rank=order_rank,
+        )
+        self.db.add(pq)
+        await self.db.commit()
+        await self.db.refresh(pq)
+        return pq
+
+    async def get_learning_path_quest(self, *, path_id, quest_id) -> LearningPathQuest | None:
+        result = await self.db.execute(
+            select(LearningPathQuest).where(
+                LearningPathQuest.path_id == path_id,
+                LearningPathQuest.quest_id == quest_id,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def delete_learning_path_quest(self, *, path_quest: LearningPathQuest) -> None:
+        await self.db.delete(path_quest)
         await self.db.commit()
