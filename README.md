@@ -25,12 +25,14 @@ Each challenge is a *quest* with:
 ## 2. Features
 
 - **Quests & submissions**
-  - 9 Python debugging quests across 3 difficulty levels.
+  - Default seed includes 9 Python debugging quests across 3 levels.
+  - Optional 30-quest seed pack is available for larger demos/tests.
   - Submissions run in a sandboxed Python process with a 5‑second timeout.
   - Detailed feedback: expected vs actual output, plus raw stdout/stderr.
 
 - **Hints & AI assistance**
   - AI hints (OpenAI-compatible API) with per-quest quotas.
+  - Hint budget endpoint to check remaining AI hints for a quest.
   - Staged hints: Hint 1 (general), Hint 2 (specific), Hint 3 (very specific, no full solution).
   - AI failure explanation: explains *what* went wrong and *why*.
   - Admin: AI quest generation (auto-generates new debugging quests).
@@ -42,6 +44,7 @@ Each challenge is a *quest* with:
 - **Progress & gamification**
   - XP and level system (first-time completions).
   - Daily streak tracking.
+  - Review suggestions based on spaced repetition interval.
   - Achievements with tiers (common, rare, epic, legendary).
   - Leaderboard with all-time / weekly / monthly views.
 
@@ -51,6 +54,7 @@ Each challenge is a *quest* with:
   - User management (view / remove learners).
   - Analytics: quest completion rates, difficulty distribution, weekly activity.
   - Content quality checker (quests missing tags/explanations/test cases).
+  - Submission retention cleanup endpoint.
 
 ---
 
@@ -79,10 +83,17 @@ venv\Scripts\activate
 pip install -r requirements.txt
 
 cp .env.example .env
-# Edit .env: set DATABASE_URL and DATABASE_URL_SYNC
+# Edit .env: set DATABASE_URL and DATABASE_URL_SYNC at minimum
 # Example:
 #   DATABASE_URL=postgresql+asyncpg://codequest:codequest@localhost:5432/codequest
 #   DATABASE_URL_SYNC=postgresql+psycopg://codequest:codequest@localhost:5432/codequest
+# Optional AI config:
+#   AI_API_BASE=https://api.openai.com/v1
+#   AI_API_KEY=...
+#   AI_MODEL=gpt-4o-mini
+# Optional auth hardening:
+#   JWT_SECRET_KEY=your-secret-key-min-32-chars
+#   JWT_ALGORITHM=HS256
 
 alembic upgrade head
 python -m scripts.seed
@@ -112,6 +123,15 @@ Default users after seeding:
 | Learner | `learner1` | `learner123` |
 | Admin | `admin1` | `admin123` |
 
+Optional larger seed pack:
+
+```bash
+cd backend
+python -m scripts.reset_and_seed_30
+```
+
+This resets core tables and seeds 30 quests plus level-based learning paths.
+
 ### 3.3 Frontend
 
 ```bash
@@ -130,6 +150,8 @@ The frontend reads `VITE_API_URL` from env (defaults to `http://localhost:8000`)
 
 ```
 FinalYear/
+├── docker-compose.yml        # Local PostgreSQL services (dev + test)
+├── README.md                 # Project overview, setup, API docs
 ├── backend/                  # FastAPI + SQLAlchemy + PostgreSQL
 │   ├── app/
 │   │   ├── main.py           # FastAPI entry point, CORS, router mounting
@@ -137,11 +159,12 @@ FinalYear/
 │   │   ├── api/              # Route handlers (auth, quests, progress, admin, hints, etc.)
 │   │   ├── core/             # Sandbox, AI helpers, rate limiting, security
 │   │   ├── models/           # SQLAlchemy ORM models
+│   │   ├── repositories/     # Data access layer per aggregate
 │   │   ├── schemas/          # Pydantic request/response schemas
 │   │   ├── services/         # Business logic layer
 │   │   └── db/               # DB session + base model
 │   ├── alembic/              # DB migrations
-│   ├── scripts/              # Seed scripts, maintenance utilities
+│   ├── scripts/              # Seed, reset, backfill, maintenance utilities
 │   └── tests/                # pytest test suite
 │
 ├── frontend/                 # React SPA (Vite + shadcn/ui)
@@ -149,8 +172,11 @@ FinalYear/
 │       ├── api/backend.ts    # Type-safe API wrapper + auth helpers
 │       ├── pages/            # Route pages (Login, Quests, Achievements, Admin, etc.)
 │       ├── components/       # Reusable UI components
-│       └── contexts/         # ThemeContext (dark/light mode)
+│       ├── hooks/            # Custom React hooks
+│       ├── lib/              # Utilities and shared client helpers
+│       └── contexts/         # App-wide React contexts
 │
+├── frontend_old/             # Legacy Next.js frontend (kept for reference)
 └── docs/                     # Schema, gap analysis, testing guide
 ```
 
@@ -181,7 +207,28 @@ See `docs/TESTING.md` for the full manual + automated testing guide.
 
 ---
 
-## 6. Deployment
+## 6. Backend Change Highlights
+
+Recent backend changes reflected in the current codebase and migrations:
+
+- Added performance indexes for progress/test-case lookups (`002_add_indexes_for_progress.py`).
+- Added learner streak tracking (`003_add_learner_streak.py`).
+- Added AI hint request tracking table and per-quest hint accounting (`004_add_hint_requests.py`).
+- Added quest concept tags (`005_add_quest_tags.py`).
+- Added learning paths + path-to-quest mapping (`006_add_learning_paths.py`).
+- Added learning-path level field for level-based unlock behavior (`007_add_learning_path_level.py`).
+- Added admin endpoints for quest quality checks, AI draft quest generation, learning-path quest assignment, and submission retention purge.
+
+Maintenance scripts in `backend/scripts/` include:
+
+- `seed.py`, `reset_and_seed.py` (default dataset)
+- `seed_30_quests.py`, `reset_and_seed_30.py` (expanded dataset)
+- `backfill_quest_tags.py`, `seed_learning_paths.py`, `upgrade_learning_paths.py`
+- `fix_quest_newlines.py`, `purge_submissions.py`
+
+---
+
+## 7. Deployment
 
 The app is deployed and auto-deploys on push to `main`.
 
@@ -193,25 +240,25 @@ The app is deployed and auto-deploys on push to `main`.
 
 ---
 
-## 7. API Routes (all under `/api/v1`)
+## 8. API Routes (all under `/api/v1`)
 
 | Module | Key Endpoints |
 |--------|---------------|
 | Auth | `POST /auth/register`, `POST /auth/login`, `GET /auth/me` |
-| Quests | `GET /quests/:id`, `POST /quests/:id/submit` |
+| Quests | `GET /quests`, `GET /quests/{quest_id}`, `POST /quests/{quest_id}/submit` |
 | Progress | `GET /progress`, `GET /progress/review-suggestions` |
-| Hints | `POST /ai/hint` |
+| Hints | `GET /hints/remaining?quest_id=...`, `POST /hints/ai` |
 | Explain | `POST /ai/explain-failure` |
-| Leaderboard | `GET /leaderboard` |
-| Learning Paths | `GET /learning-paths`, `GET /learning-paths/:id` |
+| Leaderboard | `GET /leaderboard?period=all|weekly|monthly&limit=...` |
+| Learning Paths | `GET /learning-paths`, `GET /learning-paths/{path_id}` |
 | Achievements | `GET /achievements` |
-| Admin | `GET /admin/stats`, `GET /admin/analytics`, CRUD for quests/paths/users |
+| Admin | `GET /admin/stats`, `GET /admin/users`, `GET /admin/analytics`, `GET /admin/quests/quality`, quest/test-case CRUD, learning-path CRUD + quest assignment, `POST /admin/quests/ai-draft`, `POST /admin/purge-submissions`, `DELETE /admin/users/{user_id}` |
 
 Full interactive docs at `/docs` on the backend.
 
 ---
 
-## 8. Docs
+## 9. Docs
 
 - `docs/SCHEMA.md` – Database schema, relations, indexes.
 - `docs/GAP_ANALYSIS.md` – How the implementation maps to the project specification.
