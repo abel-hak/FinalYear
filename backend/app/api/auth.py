@@ -1,29 +1,20 @@
-"""
-Auth endpoints: register and login.
-
-Per documentation:
-- User selects role (Learner or Admin) at registration.
-- JWT-based login.
-"""
-from datetime import timedelta
+"""Auth endpoints: thin controllers that delegate to auth services."""
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from app.config import get_settings
-from app.core.rate_limit import _login_limiter
 from app.db.session import get_db
 from app.models.user import User
-from app.models.learner import Learner
-from app.models.admin import Admin
 from app.schemas.auth import UserCreate, UserPublic, Token
 from app.core.security import (
-    hash_password,
-    verify_password,
-    create_access_token,
     get_current_user,
+)
+from app.services.auth_service import (
+    AuthConflictError,
+    AuthInvalidCredentialsError,
+    AuthRateLimitError,
+    AuthService,
 )
 
 
@@ -36,37 +27,11 @@ async def register_user(
     db: AsyncSession = Depends(get_db),
 ):
     """Register a new learner or admin account."""
-    # Ensure username/email are unique
-    existing = await db.execute(
-        select(User).where(
-            (User.username == payload.username) | (User.email == payload.email)
-        )
-    )
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Username or email already exists")
-
-    user = User(
-        username=payload.username,
-        email=payload.email,
-        password_hash=hash_password(payload.password),
-        role=payload.role,
-    )
-    db.add(user)
-    await db.flush()
-
-    if payload.role == "learner":
-        learner = Learner(user_id=user.id)
-        db.add(learner)
-    else:
-        admin = Admin(user_id=user.id, admin_status="active")
-        db.add(admin)
-        # Admins also get a Learner record so they can try quests and test the platform
-        learner = Learner(user_id=user.id)
-        db.add(learner)
-
-    await db.commit()
-    await db.refresh(user)
-    return user
+    service = AuthService(db)
+    try:
+        return await service.register_user(payload)
+    except AuthConflictError as exc:
+        raise HTTPException(status_code=400, detail=exc.message) from exc
 
 
 def _get_client_ip(request: Request) -> str:
@@ -90,32 +55,28 @@ async def login(
     Accepts username + password; returns JWT access token.
     Rate limited: 5 attempts per minute per IP.
     """
-    ip = _get_client_ip(request)
-    if not _login_limiter.is_allowed(f"login:{ip}"):
+    service = AuthService(db)
+    try:
+        return await service.login(
+            username=form_data.username,
+            password=form_data.password,
+            client_ip=_get_client_ip(request),
+        )
+    except AuthRateLimitError as exc:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many login attempts. Please try again in a minute.",
-        )
-    result = await db.execute(
-        select(User).where(User.username == form_data.username, User.is_deleted.is_(False))
-    )
-    user = result.scalar_one_or_none()
-    if not user or not verify_password(form_data.password, user.password_hash):
+            detail=exc.message,
+        ) from exc
+    except AuthInvalidCredentialsError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
+            detail=exc.message,
             headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    settings = get_settings()
-    minutes = getattr(settings, "access_token_expire_minutes", 30)
-    access_token_expires = timedelta(minutes=minutes)
-    access_token = create_access_token(subject=str(user.id), expires_delta=access_token_expires)
-    return Token(access_token=access_token)
+        ) from exc
 
 
 @router.get("/me", response_model=UserPublic)
-async def read_current_user(current_user: User = Depends(get_current_user)) -> UserPublic:
+async def read_current_user(current_user: User = Depends(get_current_user)) -> User:
     """Return the currently authenticated user's public profile."""
     return current_user
 
