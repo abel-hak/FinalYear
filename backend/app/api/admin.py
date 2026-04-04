@@ -8,7 +8,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, text
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 
 from app.db.session import get_db
@@ -21,6 +21,12 @@ from app.models.submission import Submission
 from app.models.learning_path import LearningPath, LearningPathQuest
 from app.config import get_settings
 from app.core.ai import generate_admin_quest_draft
+from app.services.admin_service import (
+    AdminConflictError,
+    AdminNotFoundError,
+    AdminService,
+    AdminValidationError,
+)
 from app.schemas.admin import (
     QuestCreate,
     QuestUpdate,
@@ -93,43 +99,8 @@ async def list_admin_users(
     db: AsyncSession = Depends(get_db),
 ):
     """List learners with progress for admin user table."""
-    total_quests_result = await db.execute(
-        select(func.count(Quest.id)).where(Quest.is_deleted.is_(False))
-    )
-    total_quests = total_quests_result.scalar() or 0
-
-    learners = await db.execute(
-        select(User, Learner)
-        .join(Learner, Learner.user_id == User.id)
-        .where(User.role == "learner", User.is_deleted.is_(False), Learner.is_deleted.is_(False))
-    )
-    rows = learners.all()
-
-    result = []
-    for user, learner in rows:
-        completed_q = await db.execute(
-            select(func.count(Submission.quest_id.distinct()))
-            .where(Submission.learner_id == learner.id, Submission.passed.is_(True))
-        )
-        quests_completed = completed_q.scalar() or 0
-
-        last_sub = await db.execute(
-            select(func.max(Submission.created_at)).where(Submission.learner_id == learner.id)
-        )
-        last_active = last_sub.scalar()
-
-        result.append(
-            AdminUserProgress(
-                id=str(user.id),
-                username=user.username,
-                email=user.email,
-                quests_completed=quests_completed,
-                total_quests=total_quests,
-                xp_earned=learner.total_points,
-                last_active=last_active,
-            )
-        )
-    return result
+    service = AdminService(db)
+    return await service.list_users()
 
 
 @router.get("/analytics", response_model=AdminAnalytics)
@@ -220,9 +191,8 @@ async def list_quests_admin(
     db: AsyncSession = Depends(get_db),
 ):
     """List all quests for admin management."""
-    result = await db.execute(select(Quest).order_by(Quest.order_rank))
-    quests = result.scalars().all()
-    return quests
+    service = AdminService(db)
+    return await service.list_quests()
 
 
 @router.get("/quests/quality", response_model=QuestQualityReport)
@@ -330,30 +300,14 @@ async def create_quest_admin(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new quest."""
-    # Enforce unique order_rank at the application level so we can return a clear 400
-    existing = await db.execute(
-        select(Quest).where(Quest.order_rank == payload.order_rank, Quest.is_deleted.is_(False))
-    )
-    if existing.scalar_one_or_none():
+    service = AdminService(db)
+    try:
+        return await service.create_quest(payload)
+    except AdminConflictError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Order {payload.order_rank} is already used by another quest. Choose a different order.",
-        )
-
-    quest = Quest(
-        title=payload.title,
-        description=payload.description,
-        level=payload.level,
-        order_rank=payload.order_rank,
-        initial_code=payload.initial_code,
-        solution_code=payload.solution_code,
-        explanation=payload.explanation,
-        tags=payload.tags or [],
-    )
-    db.add(quest)
-    await db.commit()
-    await db.refresh(quest)
-    return quest
+            detail=exc.message,
+        ) from exc
 
 
 @router.put("/quests/{quest_id}", response_model=QuestAdmin)
@@ -636,31 +590,9 @@ async def purge_submissions_admin(
     db: AsyncSession = Depends(get_db),
 ):
     """Purge submissions older than retention period (NFR-11.2). Preserves progress."""
+    service = AdminService(db)
     retention_days = get_settings().submission_retention_days
-    cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
-
-    r1 = await db.execute(
-        text("DELETE FROM submissions WHERE created_at < :cutoff AND passed = false"),
-        {"cutoff": cutoff},
-    )
-    failed_deleted = r1.rowcount
-
-    r2 = await db.execute(
-        text("""
-            DELETE FROM submissions s
-            WHERE s.created_at < :cutoff AND s.passed = true
-            AND EXISTS (
-                SELECT 1 FROM submissions s2
-                WHERE s2.learner_id = s.learner_id AND s2.quest_id = s.quest_id
-                AND s2.passed = true AND s2.created_at >= :cutoff
-            )
-        """),
-        {"cutoff": cutoff},
-    )
-    passed_deleted = r2.rowcount
-
-    await db.commit()
-    return {"purged": failed_deleted + passed_deleted, "retention_days": retention_days}
+    return await service.purge_submissions(retention_days)
 
 
 @router.delete("/users/{user_id}", status_code=204)
@@ -670,35 +602,16 @@ async def remove_learner_admin(
     db: AsyncSession = Depends(get_db),
 ):
     """Remove a learner (soft-delete User and Learner). US-014."""
-    result = await db.execute(
-        select(User, Learner)
-        .outerjoin(Learner, Learner.user_id == User.id)
-        .where(User.id == user_id, User.is_deleted.is_(False))
-    )
-    row = result.one_or_none()
-    if not row:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    user, learner = row
-    if user.role != "learner":
+    service = AdminService(db)
+    try:
+        await service.remove_learner(user_id=user_id, admin_id=current_admin.id)
+    except AdminNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=exc.message) from exc
+    except AdminValidationError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only learners can be removed. Admins cannot be removed via this endpoint.",
-        )
-
-    now = datetime.now(timezone.utc)
-    admin_id = current_admin.id
-
-    user.is_deleted = True
-    user.deleted_at = now
-    user.deleted_by = admin_id
-
-    if learner:
-        learner.is_deleted = True
-        learner.deleted_at = now
-        learner.deleted_by = admin_id
-
-    await db.commit()
+            detail=exc.message,
+        ) from exc
     return
 
 

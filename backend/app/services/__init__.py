@@ -6,6 +6,13 @@ from app.services.auth_service import (
     AuthRateLimitError,
     AuthService,
 )
+from app.services.admin_service import (
+    AdminConflictError,
+    AdminNotFoundError,
+    AdminService,
+    AdminValidationError,
+)
+from app.services.achievement_service import AchievementService
 from app.services.hint_service import (
     HintLearnerRequiredError,
     HintLimitExceededError,
@@ -14,6 +21,7 @@ from app.services.hint_service import (
     HintService,
     HintUnavailableError,
 )
+from app.services.leaderboard_service import LeaderboardService
 from app.services.learner_progress_service import (
     LearnerProgressService,
     QuestLockedError,
@@ -27,16 +35,22 @@ from app.services.quest_submission_service import (
 )
 
 __all__ = [
+    "AdminConflictError",
+    "AdminNotFoundError",
+    "AdminService",
+    "AdminValidationError",
     "AuthConflictError",
     "AuthInvalidCredentialsError",
     "AuthRateLimitError",
     "AuthService",
+    "AchievementService",
     "HintLearnerRequiredError",
     "HintLimitExceededError",
     "HintQuestNotFoundError",
     "HintRateLimitError",
     "HintService",
     "HintUnavailableError",
+    "LeaderboardService",
     "LearnerProgressService",
     "QuestLockedError",
     "QuestNotFoundError",
