@@ -7,20 +7,22 @@ Limited to 3 hints per quest per learner.
 
 import uuid
 
-import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
 
 from app.db.session import get_db
 from app.core.security import get_current_learner
 from app.core.ai import generate_hint
-from app.core.rate_limit import _hint_limiter
 from app.models.user import User
-from app.models.quest import Quest
-from app.models.learner import Learner
-from app.models.hint_request import HintRequest
 from app.schemas.hints import AiHintRequest, AiHintResponse
+from app.services.hint_service import (
+    HintLearnerRequiredError,
+    HintLimitExceededError,
+    HintQuestNotFoundError,
+    HintRateLimitError,
+    HintService,
+    HintUnavailableError,
+)
 
 HINT_LIMIT_PER_QUEST = 3
 
@@ -34,27 +36,14 @@ async def get_hint_remaining(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Return remaining AI hints for this quest (0–3)."""
-    learner_row = await db.execute(
-        select(Learner).where(Learner.user_id == current_user.id, Learner.is_deleted.is_(False))
-    )
-    learner = learner_row.scalar_one_or_none()
-    if not learner:
-        return {"remaining": HINT_LIMIT_PER_QUEST}
-
+    # Preserve current behavior for malformed UUID input.
     try:
-        qid = uuid.UUID(quest_id)
+        uuid.UUID(quest_id)
     except ValueError:
         return {"remaining": HINT_LIMIT_PER_QUEST}
-    count_row = await db.execute(
-        select(func.count())
-        .select_from(HintRequest)
-        .where(
-            HintRequest.learner_id == learner.id,
-            HintRequest.quest_id == qid,
-        )
-    )
-    used = count_row.scalar() or 0
-    remaining = max(0, HINT_LIMIT_PER_QUEST - used)
+
+    service = HintService(db)
+    remaining = await service.get_remaining(user_id=current_user.id, quest_id=quest_id)
     return {"remaining": remaining}
 
 
@@ -64,80 +53,30 @@ async def get_ai_hint(
     current_user: User = Depends(get_current_learner),
     db: AsyncSession = Depends(get_db),
 ) -> AiHintResponse:
-    # Rate limit: 10 hint requests per minute per learner
-    hint_key = f"hint:{current_user.id}"
-    if not _hint_limiter.is_allowed(hint_key):
+    service = HintService(db)
+    try:
+        return await service.request_hint(
+            user_id=current_user.id,
+            payload=payload,
+            generate_hint_fn=generate_hint,
+        )
+    except HintRateLimitError as exc:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many hint requests. Please wait a minute before requesting more hints.",
-        )
-    # Resolve learner
-    learner_row = await db.execute(
-        select(Learner).where(Learner.user_id == current_user.id, Learner.is_deleted.is_(False))
-    )
-    learner = learner_row.scalar_one_or_none()
-    if not learner:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Learner profile required")
-
-    # Ensure quest exists and is visible
-    result = await db.execute(
-        select(Quest).where(Quest.id == payload.quest_id, Quest.is_deleted.is_(False))
-    )
-    quest = result.scalar_one_or_none()
-    if not quest:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quest not found")
-
-    # Check hint limit
-    count_row = await db.execute(
-        select(func.count())
-        .select_from(HintRequest)
-        .where(
-            HintRequest.learner_id == learner.id,
-            HintRequest.quest_id == payload.quest_id,
-        )
-    )
-    used = count_row.scalar() or 0
-    if used >= HINT_LIMIT_PER_QUEST:
+            detail=exc.message,
+        ) from exc
+    except HintLearnerRequiredError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=exc.message) from exc
+    except HintQuestNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc
+    except HintLimitExceededError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"No hints remaining for this quest (limit: {HINT_LIMIT_PER_QUEST})",
-        )
-
-    hint_number = int(used) + 1
-    try:
-        hint_text = await generate_hint(
-            quest_title=quest.title,
-            quest_description=quest.description,
-            learner_code=payload.code,
-            last_output=payload.last_output,
-            hint_number=hint_number,
-        )
-    except RuntimeError as exc:
+            detail=exc.message,
+        ) from exc
+    except HintUnavailableError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(exc),
+            detail=exc.message,
         ) from exc
-    except httpx.HTTPStatusError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AI hints are temporarily unavailable. Please try again in a few moments.",
-        ) from exc
-    except (httpx.TimeoutException, httpx.RequestError) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AI hints are temporarily unavailable. Please try again in a few moments.",
-        ) from exc
-
-    # Record hint request
-    hint_req = HintRequest(learner_id=learner.id, quest_id=payload.quest_id)
-    db.add(hint_req)
-    await db.commit()
-
-    remaining = max(0, HINT_LIMIT_PER_QUEST - used - 1)
-    return AiHintResponse(
-        hint=hint_text,
-        remaining=remaining,
-        hint_number=hint_number,
-        limit=HINT_LIMIT_PER_QUEST,
-    )
 
