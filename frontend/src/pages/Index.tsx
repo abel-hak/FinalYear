@@ -99,12 +99,12 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background relative overflow-x-hidden">
+    <div className="min-h-screen bg-background relative overflow-x-clip">
+      <Header />
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[34rem] w-[34rem] rounded-full bg-primary/15 blur-3xl" />
         <div className="absolute top-[28rem] -left-24 h-[22rem] w-[22rem] rounded-full bg-accent/10 blur-3xl" />
       </div>
-      <Header />
 
       {/* Onboarding Tutorial for new users */}
       {showOnboarding && (
