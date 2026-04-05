@@ -27,7 +27,7 @@ settings = get_settings()
 # CORS for frontend (Next.js dev server)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"] if not settings.debug else ["*"],
+    allow_origins=["http://localhost:8080"] if not settings.debug else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
