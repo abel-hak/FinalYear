@@ -19,16 +19,19 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground shadow hover:bg-secondary/80",
         ghost: "hover:bg-secondary hover:text-secondary-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        // Hero button with gradient
-        hero: "bg-gradient-to-r from-primary via-purple-500 to-pink-500 text-primary-foreground shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300",
+        // Hero button with a cleaner, professional gradient
+        hero: "bg-gradient-to-r from-sky-500 via-blue-600 to-slate-700 text-primary-foreground shadow-lg hover:from-sky-600 hover:via-blue-700 hover:to-slate-800 hover:shadow-xl hover:-translate-y-1 transition-all duration-300",
         // Success button
-        success: "bg-success text-success-foreground shadow-lg hover:bg-success/90 hover:shadow-xl",
+        success:
+          "bg-success text-success-foreground shadow-lg hover:bg-success/90 hover:shadow-xl",
         // Gold/Achievement button
         gold: "bg-gradient-to-r from-amber-400 to-yellow-500 text-gold-foreground shadow-lg hover:shadow-xl font-bold",
         // Accent/Cyan button
-        accent: "bg-accent text-accent-foreground shadow-lg hover:bg-accent/90 hover:shadow-xl",
+        accent:
+          "bg-accent text-accent-foreground shadow-lg hover:bg-accent/90 hover:shadow-xl",
         // Glass effect
-        glass: "bg-white/10 backdrop-blur-md border border-white/20 text-foreground hover:bg-white/20",
+        glass:
+          "bg-white/10 backdrop-blur-md border border-white/20 text-foreground hover:bg-white/20",
       },
       size: {
         default: "h-11 px-5 py-2",
@@ -46,7 +49,8 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
@@ -54,7 +58,13 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
-    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />;
+    return (
+      <Comp
+        className={cn(buttonVariants({ variant, size, className }))}
+        ref={ref}
+        {...props}
+      />
+    );
   },
 );
 Button.displayName = "Button";
