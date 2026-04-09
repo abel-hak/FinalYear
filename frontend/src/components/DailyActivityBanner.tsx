@@ -39,14 +39,14 @@ export const DailyActivityBanner: React.FC<DailyActivityBannerProps> = ({
           </p>
         </div>
       </div>
-      <Link to="/quests">
-        <Button variant="hero" size="sm" className="gap-2 shrink-0">
-          <Sparkles className="w-4 h-4" />
-          Practice Now
-        </Button>
-      </Link>
+
       {onDismiss && (
-        <Button variant="ghost" size="sm" onClick={onDismiss} className="shrink-0">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onDismiss}
+          className="shrink-0"
+        >
           Dismiss
         </Button>
       )}
