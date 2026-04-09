@@ -197,7 +197,7 @@ export const WeeklyStreakSection: React.FC<WeeklyStreakSectionProps> = ({
   }, [weeklyStreak.days]);
 
   return (
-    <section className="mb-8 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-background to-accent/10 p-5 sm:p-6 shadow-sm">
+    <section className="mb-8 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-background  p-5 sm:p-6 shadow-sm">
       <style>{`
         @keyframes professional-shimmer {
           0% { transform: translateX(-100%) skewX(-15deg); opacity: 0; }
