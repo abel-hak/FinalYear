@@ -44,6 +44,20 @@
     --gold: 45 93% 47%;
     --gold-foreground: 0 0% 0%;
 
+    /* Achievement card tones */
+    --achievement-card-bg: 222 47% 11%;
+    --achievement-card-title: 48 100% 96%;
+    --achievement-card-description: 215 20% 65%;
+    --achievement-card-glow: 38 92% 50%;
+    --achievement-card-shadow: 24 77% 27%;
+    --achievement-card-shimmer: 0 0% 100%;
+
+    --achievement-card-unlocked-gradient: linear-gradient(
+      to bottom right,
+      #0f172a,
+      #1e293b
+    );
+    --achievement-card-unlocked-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
     /* Code editor theme */
     --code-bg: 230 25% 5%;
     --code-line: 230 25% 12%;
@@ -60,11 +74,32 @@
     --radius: 0.75rem;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(262, 83%, 58%) 0%, hsl(280, 75%, 50%) 50%, hsl(320, 80%, 55%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(186, 100%, 50%) 0%, hsl(200, 100%, 60%) 100%);
-    --gradient-gold: linear-gradient(135deg, hsl(45, 93%, 47%) 0%, hsl(35, 90%, 55%) 100%);
-    --gradient-dark: linear-gradient(180deg, hsl(230, 25%, 10%) 0%, hsl(230, 25%, 5%) 100%);
-    --gradient-glow: radial-gradient(ellipse at center, hsl(262, 83%, 58%, 0.15) 0%, transparent 70%);
+    --gradient-primary: linear-gradient(
+      135deg,
+      hsl(262, 83%, 58%) 0%,
+      hsl(280, 75%, 50%) 50%,
+      hsl(320, 80%, 55%) 100%
+    );
+    --gradient-accent: linear-gradient(
+      135deg,
+      hsl(186, 100%, 50%) 0%,
+      hsl(200, 100%, 60%) 100%
+    );
+    --gradient-gold: linear-gradient(
+      135deg,
+      hsl(45, 93%, 47%) 0%,
+      hsl(35, 90%, 55%) 100%
+    );
+    --gradient-dark: linear-gradient(
+      180deg,
+      hsl(230, 25%, 10%) 0%,
+      hsl(230, 25%, 5%) 100%
+    );
+    --gradient-glow: radial-gradient(
+      ellipse at center,
+      hsl(262, 83%, 58%, 0.15) 0%,
+      transparent 70%
+    );
 
     /* Shadows */
     --shadow-glow: 0 0 40px hsl(262, 83%, 58%, 0.3);
@@ -96,6 +131,19 @@
     --accent-foreground: 0 0% 100%;
     --code-bg: 230 20% 96%;
     --code-line: 230 15% 90%;
+    --achievement-card-bg: 0 0% 100%;
+    --achievement-card-title: 230 25% 15%;
+    --achievement-card-description: 215 20% 40%;
+    --achievement-card-glow: 38 92% 50%;
+    --achievement-card-shadow: 38 92% 50%;
+    --achievement-card-shimmer: 0 0% 100%;
+    --achievement-card-unlocked-gradient: linear-gradient(
+      to bottom right,
+      #2e1065,
+      #4c1d95,
+      #2e1065
+    );
+    --achievement-card-unlocked-shadow: 0 12px 30px rgba(76, 29, 149, 0.3);
     --border: 230 20% 88%;
     --input: 230 20% 94%;
     --shadow-card: 0 4px 20px hsl(0, 0%, 0%, 0.08);
@@ -115,11 +163,13 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: "Space Grotesk", sans-serif;
   }
 
-  code, pre, .font-mono {
-    font-family: 'JetBrains Mono', monospace;
+  code,
+  pre,
+  .font-mono {
+    font-family: "JetBrains Mono", monospace;
   }
 }
 
@@ -136,14 +186,18 @@
   }
 
   .gradient-border::before {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     padding: 1px;
     border-radius: inherit;
     background: var(--gradient-primary);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
@@ -163,7 +217,11 @@
 
   .quest-card {
     @apply relative overflow-hidden rounded-xl transition-all duration-300;
-    background: linear-gradient(145deg, hsl(var(--card)) 0%, hsl(var(--secondary)) 100%);
+    background: linear-gradient(
+      145deg,
+      hsl(var(--card)) 0%,
+      hsl(var(--secondary)) 100%
+    );
     box-shadow: var(--shadow-card);
   }
 
@@ -233,34 +291,69 @@
   }
 
   @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-20px); }
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
   }
 
   @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 20px hsl(262, 83%, 58%, 0.3); }
-    50% { box-shadow: 0 0 40px hsl(262, 83%, 58%, 0.6); }
+    0%,
+    100% {
+      box-shadow: 0 0 20px hsl(262, 83%, 58%, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 40px hsl(262, 83%, 58%, 0.6);
+    }
   }
 
   @keyframes slide-up {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
   }
 
   @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20%, 60% { transform: translateX(-5px); }
-    40%, 80% { transform: translateX(5px); }
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    20%,
+    60% {
+      transform: translateX(-5px);
+    }
+    40%,
+    80% {
+      transform: translateX(5px);
+    }
   }
 
   @keyframes success-bounce {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1); }
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
 }
