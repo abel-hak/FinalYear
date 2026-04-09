@@ -182,9 +182,6 @@ const Index = () => {
         <div className="container">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6 rounded-2xl border border-primary/20 bg-card/60 backdrop-blur-sm p-6 sm:p-8">
             <div>
-              <Badge variant="glass" className="mb-4 border border-primary/30">
-                Featured Quests
-              </Badge>
               <h2 className="text-3xl sm:text-4xl font-bold text-foreground">
                 Start Your Journey
               </h2>
@@ -210,23 +207,6 @@ const Index = () => {
                 </Button>
               </Link>
             </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredQuests.length === 0 ? (
-              <p className="text-muted-foreground text-sm">
-                Log in to see your personalized quests.
-              </p>
-            ) : (
-              featuredQuests.map((quest) => (
-                <Link
-                  key={quest.id}
-                  to={quest.status !== "locked" ? `/quest/${quest.id}` : "#"}
-                >
-                  <QuestCard quest={quest} />
-                </Link>
-              ))
-            )}
           </div>
         </div>
       </section>

@@ -103,8 +103,14 @@ const Quests: React.FC = () => {
     return result;
   }, [quests, filter, tagFilter]);
 
+  const getCosineOffset = React.useCallback((index: number) => {
+    const amplitude = 170;
+    const frequency = 0.9;
+    return Math.round(Math.cos(index * frequency) * amplitude);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex flex-col items-center min-h-screen bg-background">
       <Header />
 
       <main className="container py-8">
@@ -122,9 +128,6 @@ const Quests: React.FC = () => {
         <div className="mb-8 rounded-2xl border border-primary/20 bg-card/60 p-6 shadow-[0_10px_30px_hsl(var(--primary)/0.12)] backdrop-blur-sm sm:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="mb-3 inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                Quest Overview
-              </p>
               <h1 className="mb-2 text-3xl font-bold text-foreground sm:text-4xl">
                 Quest Map
               </h1>
@@ -346,38 +349,54 @@ const Quests: React.FC = () => {
 
         {/* Quest Grid */}
         {loading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="flex flex-col items-center gap-8">
             {Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}
-                className="rounded-xl bg-card border border-border p-5 space-y-3 animate-pulse"
+                className="h-44 w-44 rounded-full border border-border bg-card/70 animate-pulse"
               >
-                <div className="flex justify-between">
-                  <div className="h-5 w-20 rounded-full bg-muted" />
-                  <div className="h-5 w-14 rounded-full bg-muted" />
-                </div>
-                <div className="h-5 w-3/4 rounded bg-muted" />
-                <div className="h-4 w-full rounded bg-muted" />
-                <div className="h-4 w-2/3 rounded bg-muted" />
-                <div className="flex gap-2 pt-2">
-                  <div className="h-5 w-16 rounded-full bg-muted" />
-                  <div className="h-5 w-14 rounded-full bg-muted" />
-                </div>
+                <div className="h-full w-full rounded-full border-[10px] border-transparent" />
               </div>
             ))}
           </div>
         ) : error ? (
-          <p className="text-red-500 text-sm">{error}</p>
+          <p className="text-red-500 text-sm text-center">{error}</p>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredQuests.map((quest) => (
-              <Link
-                key={quest.id}
-                to={quest.status !== "locked" ? `/quest/${quest.id}` : "#"}
-              >
-                <QuestCard quest={quest} />
-              </Link>
-            ))}
+          <div className="relative w-full overflow-x-clip py-2">
+            <div className="pointer-events-none absolute inset-x-0 top-0 hidden h-full md:block">
+              <div className="absolute left-1/2 top-8 h-[calc(100%-4rem)] w-px -translate-x-1/2 bg-gradient-to-b from-primary/10 via-primary/20 to-primary/10" />
+              <div className="absolute left-1/2 top-10 h-24 w-24 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+            </div>
+
+            <div className="relative flex flex-col items-center gap-8">
+              {filteredQuests.map((quest, index) => (
+                <div
+                  key={quest.id}
+                  className="relative w-full flex justify-center md:translate-x-[var(--wave-x)]"
+                  style={
+                    {
+                      "--wave-x": `${getCosineOffset(index)}px`,
+                    } as React.CSSProperties
+                  }
+                >
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-1/2 top-[4.5rem] hidden h-16 w-[min(24rem,55vw)] -translate-x-1/2 -translate-y-1/2 md:block"
+                  >
+                    <div className="absolute inset-x-6 top-1/2 h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+                    <div className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-background/70 shadow-none backdrop-blur-md ring-1 ring-primary/10" />
+                    <div className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-[2px]" />
+                  </div>
+
+                  <Link
+                    to={quest.status !== "locked" ? `/quest/${quest.id}` : "#"}
+                    className="w-full max-w-[560px]"
+                  >
+                    <QuestCard quest={quest} />
+                  </Link>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </main>
