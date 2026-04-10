@@ -284,7 +284,7 @@ export const WeeklyStreakSection: React.FC<WeeklyStreakSectionProps> = ({
               key={day.key}
               className="flex flex-col items-center gap-1.5 text-center"
             >
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-[9px] sm:text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 {day.shortLabel}
               </p>
               <div className="relative flex items-center justify-center">
@@ -295,7 +295,7 @@ export const WeeklyStreakSection: React.FC<WeeklyStreakSectionProps> = ({
                     );
                     bubbleRefs.current[index] = el;
                   }}
-                  className={`relative z-30 flex h-14 w-14 items-center justify-center rounded-full border transition-all sm:h-16 sm:w-16 ${
+                  className={`relative z-30 flex h-7 w-7  sm:w-14 items-center justify-center rounded-full border transition-all sm:h-16  ${
                     day.active
                       ? "border-primary/70 bg-primary/20 shadow-[0_0_0_1px_hsl(var(--primary)/0.35),0_0_18px_hsl(var(--primary)/0.25)]"
                       : day.isPast
@@ -304,10 +304,10 @@ export const WeeklyStreakSection: React.FC<WeeklyStreakSectionProps> = ({
                   } ${day.isToday ? "ring-2 ring-primary/30" : ""}`}
                 >
                   {day.active && (
-                    <Flame className="absolute left-1/2 top-2 h-9 w-9 -translate-x-1/2 text-primary sm:h-10 sm:w-10" />
+                    <Flame className="absolute left-1/2 top-2 h-4 w-4 -translate-x-1/2 -translate-y-1/4 text-primary sm:h-10 sm:w-10" />
                   )}
                   {!day.active && day.isPast && (
-                    <Skull className="absolute left-1/2 top-2 h-7 w-7 -translate-x-1/2 translate-y-0.5 text-muted-foreground/80 sm:h-8 sm:w-8 sm:translate-y-0.5" />
+                    <Skull className="absolute left-1/2 top-2 h-4 w-4 -translate-x-1/2 -translate-y-1/4 text-muted-foreground/80 sm:h-8 sm:w-8 sm:translate-y-0.5" />
                   )}
                   {!day.active && !day.isPast && (
                     <span className="text-sm font-bold text-foreground sm:text-base">

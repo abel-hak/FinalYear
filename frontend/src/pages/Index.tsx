@@ -190,18 +190,21 @@ const Index = () => {
                 step by step.
               </p>
             </div>
-            <div className="flex gap-2 mt-4 md:mt-0">
+            <div className="flex flex-col items-center sm:flex-row gap-2 mt-4 md:mt-0">
               <Link to="/quests">
                 <Button
                   variant="outline"
-                  className="group border-primary/30 hover:bg-primary/10"
+                  className="group border-primary/30 hover:bg-primary/10 text-sm px-4 py-2"
                 >
                   View All Quests
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
               <Link to="/learning-paths">
-                <Button variant="ghost" className="group hover:bg-primary/10">
+                <Button
+                  variant="ghost"
+                  className="group hover:bg-primary/10 text-sm px-4 py-2"
+                >
                   <BookMarked className="w-4 h-4 mr-2" />
                   Learning Paths
                 </Button>
