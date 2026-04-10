@@ -19,7 +19,6 @@ import {
 import Mascot from "@/components/Mascot";
 import KnowledgeScroll from "@/components/KnowledgeScroll";
 import ErrorExplanation from "@/components/ErrorExplanation";
-import TimeoutNotification from "@/components/TimeoutNotification";
 import {
   fetchQuestDetail,
   submitQuestSolution,
@@ -28,7 +27,7 @@ import {
   explainFailure,
 } from "@/api/backend";
 import confetti from "canvas-confetti";
-
+import TimerDisplay from "@/components/TimerDisplay";
 const playSuccessSound = () => {
   try {
     const AudioContext =
@@ -249,11 +248,12 @@ const QuestPage: React.FC = () => {
     };
   }, [id]);
 
-  // Update mascot based on state
+  // Update mascot and stop timer on success
   useEffect(() => {
     if (feedback === "success") {
       setMascotMood("celebrating");
       setMascotMessage("🎉 Amazing! You squashed that bug!");
+      setIsTimerRunning(false); // Stop the timer
     } else if (feedback === "error") {
       setMascotMood("encouraging");
       setMascotMessage("Don't give up! Check the hints if you're stuck.");
@@ -283,6 +283,13 @@ const QuestPage: React.FC = () => {
 
     return () => clearInterval(timer);
   }, [isTimerRunning, timeRemaining]);
+
+  // Ensure timer stops when feedback is 'success'
+  useEffect(() => {
+    if (feedback === "success") {
+      setIsTimerRunning(false); // Stop the timer
+    }
+  }, [feedback]);
 
   if (!id) {
     return (
@@ -473,13 +480,12 @@ const QuestPage: React.FC = () => {
           </div>
 
           {/* Timer display in header area */}
-          <div className="fixed top-20 right-6 z-40">
-            <TimeoutNotification
-              timeLimit={300}
-              onTimeout={() => setFeedback("timeout")}
-              onExtend={() => setTimeRemaining((prev) => prev + 60)}
-            />
-          </div>
+          <TimerDisplay
+            timeLimit={300}
+            onTimeout={() => setFeedback("timeout")}
+            onExtend={() => setTimeRemaining((prev) => prev + 60)}
+            isPaused={feedback === "success"}
+          />
 
           <main className="container py-6">
             {/* Back button and quest navigation */}
@@ -759,7 +765,7 @@ const QuestPage: React.FC = () => {
 
               {/* Sidebar - Hints */}
               <div className="lg:col-span-1">
-                <div className="sticky top-24 p-6 rounded-xl bg-card border border-border space-y-2">
+                <div className="sticky top-36 p-6 rounded-xl bg-card border border-border space-y-2">
                   {aiError && <p className="text-xs text-red-400">{aiError}</p>}
                   <HintPanel
                     hints={meta?.hints ?? []}
