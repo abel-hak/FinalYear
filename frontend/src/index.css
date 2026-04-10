@@ -114,6 +114,42 @@
     --sidebar-accent-foreground: 210 40% 96%;
     --sidebar-border: 230 20% 18%;
     --sidebar-ring: 262 83% 58%;
+
+    /* Leaderboard avatar gradients */
+    --leaderboard-avatar-1: linear-gradient(135deg, #8b5cf6, #9333ea);
+    --leaderboard-avatar-2: linear-gradient(135deg, #3b82f6, #4f46e5);
+    --leaderboard-avatar-3: linear-gradient(135deg, #10b981, #0d9488);
+    --leaderboard-avatar-4: linear-gradient(135deg, #f43f5e, #ec4899);
+    --leaderboard-avatar-5: linear-gradient(135deg, #f59e0b, #ea580c);
+    --leaderboard-avatar-6: linear-gradient(135deg, #06b6d4, #3b82f6);
+
+    /* Leaderboard podium accents */
+    --leaderboard-podium-1-stripe: linear-gradient(
+      90deg,
+      #f59e0b,
+      #fde68a,
+      #d97706
+    );
+    --leaderboard-podium-1-glow: rgba(234, 179, 8, 0.15);
+    --leaderboard-podium-1-text: 38 92% 50%;
+
+    --leaderboard-podium-2-stripe: linear-gradient(
+      90deg,
+      #94a3b8,
+      #f1f5f9,
+      #64748b
+    );
+    --leaderboard-podium-2-glow: rgba(148, 163, 184, 0.12);
+    --leaderboard-podium-2-text: 215 20% 65%;
+
+    --leaderboard-podium-3-stripe: linear-gradient(
+      90deg,
+      #9a3412,
+      #fdba74,
+      #7c2d12
+    );
+    --leaderboard-podium-3-glow: rgba(194, 65, 12, 0.12);
+    --leaderboard-podium-3-text: 25 95% 53%;
   }
 
   /* Light theme - applied when html has class "light" */
@@ -153,6 +189,42 @@
     --sidebar-accent: 230 20% 94%;
     --sidebar-accent-foreground: 230 25% 15%;
     --sidebar-border: 230 20% 90%;
+
+    /* Leaderboard avatar gradients (light mode) */
+    --leaderboard-avatar-1: linear-gradient(135deg, #7c3aed, #8b5cf6);
+    --leaderboard-avatar-2: linear-gradient(135deg, #2563eb, #4338ca);
+    --leaderboard-avatar-3: linear-gradient(135deg, #059669, #0f766e);
+    --leaderboard-avatar-4: linear-gradient(135deg, #e11d48, #db2777);
+    --leaderboard-avatar-5: linear-gradient(135deg, #d97706, #c2410c);
+    --leaderboard-avatar-6: linear-gradient(135deg, #0891b2, #2563eb);
+
+    /* Leaderboard podium accents (light mode) */
+    --leaderboard-podium-1-stripe: linear-gradient(
+      90deg,
+      #d97706,
+      #fef08a,
+      #b45309
+    );
+    --leaderboard-podium-1-glow: rgba(217, 119, 6, 0.18);
+    --leaderboard-podium-1-text: 35 92% 45%;
+
+    --leaderboard-podium-2-stripe: linear-gradient(
+      90deg,
+      #64748b,
+      #f8fafc,
+      #475569
+    );
+    --leaderboard-podium-2-glow: rgba(100, 116, 139, 0.14);
+    --leaderboard-podium-2-text: 215 16% 47%;
+
+    --leaderboard-podium-3-stripe: linear-gradient(
+      90deg,
+      #9a3412,
+      #fed7aa,
+      #7c2d12
+    );
+    --leaderboard-podium-3-glow: rgba(154, 52, 18, 0.14);
+    --leaderboard-podium-3-text: 20 91% 40%;
   }
 }
 
@@ -262,6 +334,66 @@
     @apply rounded-lg p-4 border-l-4;
     background: hsl(var(--destructive) / 0.1);
     border-color: hsl(var(--destructive));
+  }
+
+  .leaderboard-avatar-1 {
+    background-image: var(--leaderboard-avatar-1);
+  }
+
+  .leaderboard-avatar-2 {
+    background-image: var(--leaderboard-avatar-2);
+  }
+
+  .leaderboard-avatar-3 {
+    background-image: var(--leaderboard-avatar-3);
+  }
+
+  .leaderboard-avatar-4 {
+    background-image: var(--leaderboard-avatar-4);
+  }
+
+  .leaderboard-avatar-5 {
+    background-image: var(--leaderboard-avatar-5);
+  }
+
+  .leaderboard-avatar-6 {
+    background-image: var(--leaderboard-avatar-6);
+  }
+
+  .leaderboard-podium-1-stripe {
+    background-image: var(--leaderboard-podium-1-stripe);
+  }
+
+  .leaderboard-podium-1-glow {
+    background-color: var(--leaderboard-podium-1-glow);
+  }
+
+  .leaderboard-podium-1-text {
+    color: hsl(var(--leaderboard-podium-1-text));
+  }
+
+  .leaderboard-podium-2-stripe {
+    background-image: var(--leaderboard-podium-2-stripe);
+  }
+
+  .leaderboard-podium-2-glow {
+    background-color: var(--leaderboard-podium-2-glow);
+  }
+
+  .leaderboard-podium-2-text {
+    color: hsl(var(--leaderboard-podium-2-text));
+  }
+
+  .leaderboard-podium-3-stripe {
+    background-image: var(--leaderboard-podium-3-stripe);
+  }
+
+  .leaderboard-podium-3-glow {
+    background-color: var(--leaderboard-podium-3-glow);
+  }
+
+  .leaderboard-podium-3-text {
+    color: hsl(var(--leaderboard-podium-3-text));
   }
 }
 
