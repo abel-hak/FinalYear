@@ -74,6 +74,7 @@ const Achievements: React.FC = () => {
   const [filter, setFilter] = useState<
     "all" | "unlocked" | "locked" | "in_progress"
   >("all");
+  const [totalXP, setTotalXP] = useState(0);
 
   useEffect(() => {
     async function load() {
@@ -91,9 +92,11 @@ const Achievements: React.FC = () => {
         const list = achievementsResult.value.map(mapDto);
         setAchievements(list);
 
+        let totalPointsFromQuests = 0;
         if (progressResult.status === "fulfilled") {
           setStreakDays(progressResult.value.streak_days ?? 0);
           setLastActivityDate(progressResult.value.last_activity_date ?? null);
+          totalPointsFromQuests = progressResult.value.total_points ?? 0;
         } else {
           setStreakDays(0);
           setLastActivityDate(null);
@@ -115,6 +118,13 @@ const Achievements: React.FC = () => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(nowUnlocked));
 
         setError(null);
+
+        // Calculate total XP
+        const totalXPFromAchievements = list
+          .filter((a) => a.unlocked)
+          .reduce((sum, a) => sum + a.xp, 0);
+
+        setTotalXP(totalXPFromAchievements + totalPointsFromQuests);
       } catch (e) {
         console.error(e);
         setError(
@@ -182,7 +192,7 @@ const Achievements: React.FC = () => {
                 XP Earned
               </div>
               <div className="text-2xl font-bold text-foreground">
-                {totalXPFromAchievements}
+                {totalXP}
               </div>
             </div>
           </div>
