@@ -53,6 +53,7 @@ class QuestAdminBase(BaseModel):
     title: str
     description: str
     level: int
+    xp_reward: int = 10
     order_rank: int
     initial_code: str
     solution_code: str
@@ -68,6 +69,7 @@ class QuestUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     level: Optional[int] = None
+    xp_reward: Optional[int] = None
     order_rank: Optional[int] = None
     initial_code: Optional[str] = None
     solution_code: Optional[str] = None

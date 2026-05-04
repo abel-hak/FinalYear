@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/leaderboard", tags=["leaderboard"])
 
-Period = Literal["all", "weekly", "monthly"]
+Period = Literal["all", "weekly", "monthly", "lifetime"]
 
 
 class LeaderboardEntry(BaseModel):
@@ -41,11 +41,11 @@ async def get_leaderboard(
     user: User = Depends(get_current_learner),
     db: AsyncSession = Depends(get_db),
     limit: int = Query(10, ge=1, le=50),
-    period: Period = Query("all", description="all | weekly | monthly"),
+    period: Period = Query("all", description="all | weekly | monthly | lifetime"),
 ):
     """
     Top learners by XP. Requires auth (learner or admin).
-    period=all: lifetime XP; weekly: last 7 days; monthly: last 30 days.
+    period=all or lifetime: lifetime XP; weekly: last 7 days; monthly: last 30 days.
     """
     service = LeaderboardService(db)
     payload = await service.get_leaderboard(user=user, limit=limit, period=period)

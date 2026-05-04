@@ -110,10 +110,16 @@ async def ai_draft_quest(
     db: AsyncSession = Depends(get_db),
 ):
     service = AdminService(db)
-    return await service.generate_ai_draft(
-        payload=payload,
-        draft_fn=generate_admin_quest_draft,
-    )
+    try:
+        return await service.generate_ai_draft(
+            payload=payload,
+            draft_fn=generate_admin_quest_draft,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
 
 
 @router.post("/quests", response_model=QuestAdmin, status_code=201)

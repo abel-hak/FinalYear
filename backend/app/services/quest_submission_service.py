@@ -116,7 +116,7 @@ class QuestSubmissionService:
         )
 
         if passed and not already_completed:
-            learner.total_points += 10
+            learner.total_points += int(getattr(quest, "xp_reward", 10) or 0)
             if quest.level > learner.current_level:
                 learner.current_level = quest.level
 

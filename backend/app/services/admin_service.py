@@ -21,6 +21,7 @@ from app.schemas.admin import (
     QuestQualityIssue,
     QuestQualityReport,
 )
+from app.services.points_service import PointsService
 
 
 @dataclass
@@ -43,6 +44,7 @@ class AdminService:
 
     def __init__(self, db: AsyncSession) -> None:
         self.repo = AdminRepository(db)
+        self.points_service = PointsService(db)
 
     async def list_quests(self):
         return await self.repo.list_quests_ordered()
@@ -70,7 +72,7 @@ class AdminService:
                     email=user.email,
                     quests_completed=quests_completed,
                     total_quests=total_quests,
-                    xp_earned=learner.total_points,
+                    xp_earned=await self.points_service.get_lifetime_points_for_user(user.id),
                     last_active=last_active,
                 )
             )

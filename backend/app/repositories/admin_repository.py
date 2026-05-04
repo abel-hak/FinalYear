@@ -37,6 +37,7 @@ class AdminRepository:
             title=payload.title,
             description=payload.description,
             level=payload.level,
+            xp_reward=payload.xp_reward,
             order_rank=payload.order_rank,
             initial_code=payload.initial_code,
             solution_code=payload.solution_code,

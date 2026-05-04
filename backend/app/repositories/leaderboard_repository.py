@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.learner import Learner
+from app.models.quest import Quest
 from app.models.submission import Submission
 from app.models.user import User
 
@@ -28,7 +29,7 @@ class LeaderboardRepository:
             ~User.username.like("ratetest_%"),
         ]
 
-    async def fetch_all_time_rows(self, *, limit: int):
+    async def fetch_all_time_rows(self):
         base_filters = self.base_filters()
         subq = (
             select(
@@ -56,96 +57,62 @@ class LeaderboardRepository:
             .where(*base_filters)
         )
 
-        top_result = await self.db.execute(
+        result = await self.db.execute(
             base.order_by(
                 Learner.total_points.desc(),
                 completed_col.desc(),
                 streak_col.desc(),
                 User.username.asc(),
-            ).limit(limit)
+            )
         )
-        return top_result.all(), base, completed_col, streak_col, completed_subq
+        return result.all()
 
-    async def fetch_me_all_time(self, *, base, user_id):
-        me_result = await self.db.execute(base.where(User.id == user_id).limit(1))
-        return me_result.first()
-
-    async def count_ahead_all_time(
-        self,
-        *,
-        completed_col,
-        streak_col,
-        completed_subq,
-        my_points: int,
-        my_completed: int,
-        my_streak: int,
-        my_username: str,
-    ) -> int:
-        base_filters = self.base_filters()
-        ahead_clause = or_(
-            Learner.total_points > my_points,
-            and_(Learner.total_points == my_points, completed_col > my_completed),
-            and_(
-                Learner.total_points == my_points,
-                completed_col == my_completed,
-                streak_col > my_streak,
-            ),
-            and_(
-                Learner.total_points == my_points,
-                completed_col == my_completed,
-                streak_col == my_streak,
-                User.username < my_username,
-            ),
-        )
-
-        result = await self.db.execute(
-            select(func.count(User.id))
-            .select_from(User)
-            .join(Learner, Learner.user_id == User.id)
-            .outerjoin(completed_subq, completed_subq.c.learner_id == Learner.id)
-            .where(*base_filters)
-            .where(ahead_clause)
-        )
-        return int(result.scalar() or 0)
-
-    async def fetch_period_rows(self, *, period: str, limit: int):
+    async def fetch_period_rows(self, *, period: str):
         base_filters = self.base_filters()
         cutoff = datetime.now(timezone.utc) - timedelta(days=7 if period == "weekly" else 30)
 
-        subq = (
+        first_pass_subq = (
             select(
                 Submission.learner_id,
-                func.count(func.distinct(Submission.quest_id)).label("completed"),
+                Submission.quest_id,
+                func.min(Submission.created_at).label("first_pass_at"),
             )
             .where(Submission.passed.is_(True), Submission.created_at >= cutoff)
-            .group_by(Submission.learner_id)
+            .group_by(Submission.learner_id, Submission.quest_id)
         )
-        period_subq = subq.subquery()
+        period_subq = first_pass_subq.subquery()
+        xp_subq = (
+            select(
+                period_subq.c.learner_id,
+                func.coalesce(func.sum(Quest.xp_reward), 0).label("total_points"),
+                func.count(period_subq.c.quest_id).label("completed"),
+            )
+            .select_from(period_subq)
+            .join(Quest, Quest.id == period_subq.c.quest_id)
+            .where(period_subq.c.first_pass_at >= cutoff)
+            .group_by(period_subq.c.learner_id)
+        ).subquery()
         streak_col = func.coalesce(Learner.streak_days, 0)
 
         base = (
             select(
                 User.id.label("user_id"),
                 User.username,
-                (period_subq.c.completed * 10).label("total_points"),
+                func.coalesce(xp_subq.c.total_points, 0).label("total_points"),
                 Learner.streak_days,
-                period_subq.c.completed.label("completed"),
+                func.coalesce(xp_subq.c.completed, 0).label("completed"),
             )
             .join(Learner, Learner.user_id == User.id)
-            .join(period_subq, period_subq.c.learner_id == Learner.id)
+            .outerjoin(xp_subq, xp_subq.c.learner_id == Learner.id)
             .where(*base_filters)
         )
 
-        top_result = await self.db.execute(
+        result = await self.db.execute(
             base.order_by(
-                period_subq.c.completed.desc(),
+                func.coalesce(xp_subq.c.total_points, 0).desc(),
+                func.coalesce(xp_subq.c.completed, 0).desc(),
                 streak_col.desc(),
                 User.username.asc(),
-            ).limit(limit)
+            )
         )
-        top_rows = top_result.all()
-        return top_rows, base
-
-    async def fetch_me_period(self, *, base, user_id):
-        me_result = await self.db.execute(base.where(User.id == user_id).limit(1))
-        return me_result.first()
+        return result.all()

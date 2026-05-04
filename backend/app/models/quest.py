@@ -1,6 +1,6 @@
 """
 Quest model - a single debugging challenge with initial/solution code and explanation.
-Per documentation: id, title, description, level, initial_code, solution_code, explanation.
+Per documentation: id, title, description, level, xp_reward, initial_code, solution_code, explanation.
 Order field added for strictly linear progress map (Quest 1 -> 2 -> 3).
 """
 import uuid
@@ -26,6 +26,7 @@ class Quest(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     level: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    xp_reward: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
     order_rank: Mapped[int] = mapped_column(Integer, nullable=False, unique=True, index=True)
     initial_code: Mapped[str] = mapped_column(Text, nullable=False)
     solution_code: Mapped[str] = mapped_column(Text, nullable=False)

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
 from app.repositories.leaderboard_repository import LeaderboardRepository
+from app.services.points_service import PointsService
 
 
 class LeaderboardService:
@@ -15,76 +16,76 @@ class LeaderboardService:
 
     def __init__(self, db: AsyncSession) -> None:
         self.repo = LeaderboardRepository(db)
+        self.points_service = PointsService(db)
 
-    async def get_leaderboard(self, *, user: User, limit: int, period: str) -> dict[str, Any]:
-        if period == "all":
-            top_rows, base, completed_col, streak_col, completed_subq = await self.repo.fetch_all_time_rows(limit=limit)
-            me_row = await self.repo.fetch_me_all_time(base=base, user_id=user.id)
+    @staticmethod
+    def _rank_key(row: Any) -> tuple[int, int, int, str]:
+        return (
+            -int(row.total_points or 0),
+            -int(row.completed or 0),
+            -int(row.streak_days or 0),
+            str(row.username),
+        )
 
-            entries = [
+    async def _build_lifetime_rows(self, rows: list[Any], user_id) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        for row in rows:
+            points = await self.points_service.get_lifetime_points_for_user(row.user_id)
+            out.append(
                 {
-                    "rank": i + 1,
+                    "user_id": row.user_id,
                     "username": row.username,
-                    "total_points": int(row.total_points or 0),
+                    "total_points": points,
                     "streak_days": int(row.streak_days or 0),
                     "quests_completed": int(row.completed or 0),
-                    "is_me": (row.user_id == user.id),
+                    "is_me": (row.user_id == user_id),
                 }
-                for i, row in enumerate(top_rows)
-            ]
-
-            if not me_row:
-                return {"entries": entries, "me": None}
-
-            my_points = int(me_row.total_points or 0)
-            my_completed = int(me_row.completed or 0)
-            my_streak = int(me_row.streak_days or 0)
-            my_username = str(me_row.username)
-            ahead_count = await self.repo.count_ahead_all_time(
-                completed_col=completed_col,
-                streak_col=streak_col,
-                completed_subq=completed_subq,
-                my_points=my_points,
-                my_completed=my_completed,
-                my_streak=my_streak,
-                my_username=my_username,
             )
-            me = {
-                "rank": ahead_count + 1,
-                "username": my_username,
-                "total_points": my_points,
-                "streak_days": my_streak,
-                "quests_completed": my_completed,
-                "is_me": True,
-            }
-            return {"entries": entries, "me": me}
+        out.sort(key=lambda item: (-item["total_points"], -item["quests_completed"], -item["streak_days"], item["username"]))
+        for index, item in enumerate(out, start=1):
+            item["rank"] = index
+        return out
 
-        top_rows, base = await self.repo.fetch_period_rows(period=period, limit=limit)
-        me_row = await self.repo.fetch_me_period(base=base, user_id=user.id)
-
-        entries = [
+    @staticmethod
+    def _build_rows(rows: list[Any], user_id) -> list[dict[str, Any]]:
+        out = [
             {
-                "rank": i + 1,
+                "user_id": row.user_id,
                 "username": row.username,
                 "total_points": int(row.total_points or 0),
                 "streak_days": int(row.streak_days or 0),
                 "quests_completed": int(row.completed or 0),
-                "is_me": (row.user_id == user.id),
+                "is_me": (row.user_id == user_id),
             }
-            for i, row in enumerate(top_rows)
+            for row in rows
         ]
+        out.sort(key=lambda item: (-item["total_points"], -item["quests_completed"], -item["streak_days"], item["username"]))
+        for index, item in enumerate(out, start=1):
+            item["rank"] = index
+        return out
 
-        me = (
+    async def get_leaderboard(self, *, user: User, limit: int, period: str) -> dict[str, Any]:
+        if period in {"all", "lifetime"}:
+            rows = await self.repo.fetch_all_time_rows()
+            ranked = await self._build_lifetime_rows(rows, user.id)
+        else:
+            rows = await self.repo.fetch_period_rows(period=period)
+            ranked = self._build_rows(rows, user.id)
+
+        entries = [
             {
-                "rank": None,
-                "username": me_row.username,
-                "total_points": int(me_row.total_points or 0),
-                "streak_days": int(me_row.streak_days or 0),
-                "quests_completed": int(me_row.completed or 0),
-                "is_me": True,
+                "rank": row["rank"],
+                "username": row["username"],
+                "total_points": row["total_points"],
+                "streak_days": row["streak_days"],
+                "quests_completed": row["quests_completed"],
+                "is_me": row["is_me"],
             }
-            if me_row
-            else {
+            for row in ranked[:limit]
+        ]
+        me = next((row for row in ranked if row["user_id"] == user.id), None)
+        if not me:
+            me = {
                 "rank": None,
                 "username": user.username,
                 "total_points": 0,
@@ -92,5 +93,13 @@ class LeaderboardService:
                 "quests_completed": 0,
                 "is_me": True,
             }
-        )
+        else:
+            me = {
+                "rank": me["rank"],
+                "username": me["username"],
+                "total_points": me["total_points"],
+                "streak_days": me["streak_days"],
+                "quests_completed": me["quests_completed"],
+                "is_me": True,
+            }
         return {"entries": entries, "me": me}

@@ -11,6 +11,7 @@ from app.repositories.learner_repository import LearnerRepository
 from app.repositories.progress_repository import ProgressRepository
 from app.schemas.progress import ProgressSummary, ReviewSuggestion
 from app.schemas.quest import QuestDetail, QuestSummary
+from app.services.points_service import PointsService
 
 
 @dataclass
@@ -30,6 +31,7 @@ class LearnerProgressService:
         self.db = db
         self.learner_repo = LearnerRepository(db)
         self.progress_repo = ProgressRepository(db)
+        self.points_service = PointsService(db)
 
     @staticmethod
     def _build_statuses(ordered_quest_ids: list, completed_ids: set) -> dict:
@@ -88,7 +90,7 @@ class LearnerProgressService:
         last_activity = learner.last_activity_date.isoformat() if learner.last_activity_date else None
         return ProgressSummary(
             current_level=learner.current_level,
-            total_points=learner.total_points,
+            total_points=await self.points_service.get_lifetime_points_for_user(user_id),
             streak_days=learner.streak_days,
             last_activity_date=last_activity,
             quests=summaries,

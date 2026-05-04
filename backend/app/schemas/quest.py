@@ -8,6 +8,7 @@ class QuestBase(BaseModel):
     title: str
     description: str
     level: int
+    xp_reward: int = 10
     order_rank: int
 
 
