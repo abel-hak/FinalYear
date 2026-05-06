@@ -22,9 +22,10 @@ class LearningPathSummary(BaseModel):
     description: str
     level: int  # 1=Beginner, 2=Intermediate, 3=Advanced
     order_rank: int
+    language: str = "python"
     quest_count: int
     completed_count: int = 0
-    unlocked: bool = True  # Level 1 always; Level N when Level N-1 path is complete
+    unlocked: bool = True  # Level 1 of each language is always unlocked; Level N when Level N-1 in the same language is complete
 
 
 class LearningPathDetail(BaseModel):
@@ -34,6 +35,7 @@ class LearningPathDetail(BaseModel):
     description: str
     level: int
     order_rank: int
+    language: str = "python"
     quests: list[LearningPathQuestItem]
     is_unlocked: bool = True
     unlock_hint: str | None = None  # e.g. "Complete Level 1 to unlock"

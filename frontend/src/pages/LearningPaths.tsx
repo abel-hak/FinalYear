@@ -4,6 +4,7 @@ import { BookOpen, ChevronRight, Lock, Zap, Code2, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { fetchLearningPaths, type LearningPathSummaryDto } from '@/api/backend';
 import ProgressBar from '@/components/ProgressBar';
+import { Button } from '@/components/ui/button';
 
 const levelGradients: Record<number, string> = {
   1: 'from-emerald-500 to-teal-500',
@@ -23,9 +24,19 @@ const levelLabels: Record<number, string> = {
   3: 'Advanced',
 };
 
+const LANGUAGE_LABELS: Record<string, string> = {
+  python: 'Python',
+  java: 'Java',
+  cpp: 'C++',
+  javascript: 'JavaScript',
+  typescript: 'TypeScript',
+  c: 'C',
+};
+
 const LearningPaths: React.FC = () => {
   const [paths, setPaths] = React.useState<LearningPathSummaryDto[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [languageFilter, setLanguageFilter] = React.useState<string>('all');
 
   React.useEffect(() => {
     let cancelled = false;
@@ -43,18 +54,56 @@ const LearningPaths: React.FC = () => {
     return () => { cancelled = true; };
   }, []);
 
+  const allLanguages = React.useMemo(() => {
+    const set = new Set<string>();
+    paths.forEach((p) => set.add((p.language ?? 'python').toLowerCase()));
+    return Array.from(set).sort();
+  }, [paths]);
+
+  const filteredPaths = React.useMemo(() => {
+    if (languageFilter === 'all') return paths;
+    return paths.filter(
+      (p) => (p.language ?? 'python').toLowerCase() === languageFilter,
+    );
+  }, [paths, languageFilter]);
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <main className="container py-8">
-        <div className="mb-10">
+        <div className="mb-6">
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">
             Learning Paths
           </h1>
           <p className="text-muted-foreground">
-            Curated sequences of quests for specific goals. Complete each level to unlock the next.
+            Curated sequences of quests for specific goals. Each language progresses on its own — complete the previous level in a language to unlock the next.
           </p>
         </div>
+
+        {!loading && allLanguages.length > 1 && (
+          <div className="mb-8 flex flex-wrap items-center gap-2 rounded-2xl border border-primary/20 bg-card/60 p-4 backdrop-blur-sm">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground mr-2">
+              Language
+            </span>
+            <Button
+              variant={languageFilter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setLanguageFilter('all')}
+            >
+              All
+            </Button>
+            {allLanguages.map((lang) => (
+              <Button
+                key={lang}
+                variant={languageFilter === lang ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setLanguageFilter(lang)}
+              >
+                {LANGUAGE_LABELS[lang] ?? lang}
+              </Button>
+            ))}
+          </div>
+        )}
 
         {loading ? (
           /* Skeleton loaders */
@@ -63,14 +112,18 @@ const LearningPaths: React.FC = () => {
               <div key={i} className="h-48 rounded-2xl bg-card border border-border animate-pulse" />
             ))}
           </div>
-        ) : paths.length === 0 ? (
+        ) : filteredPaths.length === 0 ? (
           <div className="p-12 rounded-2xl bg-card border border-border text-center text-muted-foreground">
             <Code2 className="w-12 h-12 mx-auto mb-4 opacity-30" />
-            <p>No learning paths yet. Check back later!</p>
+            <p>
+              {paths.length === 0
+                ? 'No learning paths yet. Check back later!'
+                : 'No paths match this language filter.'}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {paths.map((path) => {
+            {filteredPaths.map((path) => {
               const unlocked = path.unlocked !== false;
               const gradient = levelGradients[path.level] ?? levelGradients[1];
               const icon = levelIcons[path.level] ?? levelIcons[1];
@@ -104,9 +157,12 @@ const LearningPaths: React.FC = () => {
                           </div>
 
                           <div>
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full bg-gradient-to-r ${gradient} text-white`}>
                                 {label}
+                              </span>
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                                {LANGUAGE_LABELS[(path.language ?? 'python').toLowerCase()] ?? path.language}
                               </span>
                               {!unlocked && (
                                 <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/20">
@@ -140,7 +196,10 @@ const LearningPaths: React.FC = () => {
                         <ProgressBar value={progress} max={total} size="sm" variant="success" />
                       ) : !unlocked ? (
                         <p className="text-xs text-amber-500 font-medium">
-                          Complete Level {path.level - 1} to unlock
+                          Complete Level {path.level - 1} of{' '}
+                          {LANGUAGE_LABELS[(path.language ?? 'python').toLowerCase()] ??
+                            path.language}{' '}
+                          to unlock
                         </p>
                       ) : null}
                     </div>

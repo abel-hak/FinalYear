@@ -34,20 +34,34 @@ class LearnerProgressService:
         self.points_service = PointsService(db)
 
     @staticmethod
-    def _build_statuses(ordered_quest_ids: list, completed_ids: set) -> dict:
+    def _build_statuses_per_language(quests: list, completed_ids: set) -> dict:
+        """Compute completed/current/locked statuses scoped per language.
+
+        Each language progresses independently: e.g. completing all Python
+        quests does not unlock Java, and vice versa. Within a language the
+        usual linear rule applies — exactly one "current" quest, everything
+        after it is locked until the previous one is completed.
+        """
+        # Group quests by language while preserving order_rank ordering.
+        by_language: dict[str, list] = {}
+        for q in quests:
+            lang = (getattr(q, "language", None) or "python").lower()
+            by_language.setdefault(lang, []).append(q)
+
         statuses: dict = {}
-        previous_completed = True
-        current_assigned = False
-        for qid in ordered_quest_ids:
-            if qid in completed_ids:
-                statuses[qid] = "completed"
-            elif previous_completed and not current_assigned:
-                statuses[qid] = "current"
-                current_assigned = True
-                previous_completed = False
-            else:
-                statuses[qid] = "locked"
-                previous_completed = False
+        for lang_quests in by_language.values():
+            previous_completed = True
+            current_assigned = False
+            for q in lang_quests:
+                if q.id in completed_ids:
+                    statuses[q.id] = "completed"
+                elif previous_completed and not current_assigned:
+                    statuses[q.id] = "current"
+                    current_assigned = True
+                    previous_completed = False
+                else:
+                    statuses[q.id] = "locked"
+                    previous_completed = False
         return statuses
 
     async def _load_progress_state(self, user_id):
@@ -55,7 +69,7 @@ class LearnerProgressService:
         quests = await self.progress_repo.list_active_quests_ordered()
         ordered_ids = [q.id for q in quests]
         completed_ids = await self.progress_repo.get_completed_quest_ids_for_learner(learner.id)
-        statuses = self._build_statuses(ordered_ids, completed_ids)
+        statuses = self._build_statuses_per_language(quests, completed_ids)
         return learner, quests, ordered_ids, completed_ids, statuses
 
     async def list_quests_for_user(self, user_id) -> list[QuestSummary]:
@@ -66,6 +80,8 @@ class LearnerProgressService:
                 title=q.title,
                 description=q.description,
                 level=q.level,
+                xp_reward=getattr(q, "xp_reward", 10) or 10,
+                language=getattr(q, "language", None) or "python",
                 order_rank=q.order_rank,
                 status=statuses.get(q.id, "locked"),
                 tags=q.tags if q.tags else [],
@@ -81,6 +97,8 @@ class LearnerProgressService:
                 title=q.title,
                 description=q.description,
                 level=q.level,
+                xp_reward=getattr(q, "xp_reward", 10) or 10,
+                language=getattr(q, "language", None) or "python",
                 order_rank=q.order_rank,
                 status=statuses.get(q.id, "locked"),
                 tags=q.tags if q.tags else [],
@@ -97,7 +115,7 @@ class LearnerProgressService:
         )
 
     async def get_quest_detail_for_user(self, user_id, quest_id) -> QuestDetail:
-        learner, quests, ordered_ids, _, statuses = await self._load_progress_state(user_id)
+        learner, quests, _, _, statuses = await self._load_progress_state(user_id)
 
         quest = await self.progress_repo.get_active_quest_by_id(quest_id)
         if not quest:
@@ -108,16 +126,26 @@ class LearnerProgressService:
 
         completed = await self.progress_repo.has_passed_submission(learner.id, quest.id)
 
+        # prev/next must only point to the previous/next quest in the SAME
+        # language so a learner on the last Python quest does not jump into a
+        # Java quest (and vice versa).
+        quest_lang = (getattr(quest, "language", None) or "python").lower()
+        same_lang_ids = [
+            q.id
+            for q in quests
+            if (getattr(q, "language", None) or "python").lower() == quest_lang
+        ]
+
         prev_id = None
         next_id = None
-        if quest.id in ordered_ids:
-            idx = ordered_ids.index(quest.id)
+        if quest.id in same_lang_ids:
+            idx = same_lang_ids.index(quest.id)
             if idx > 0:
-                candidate = ordered_ids[idx - 1]
+                candidate = same_lang_ids[idx - 1]
                 if statuses.get(candidate) != "locked":
                     prev_id = candidate
-            if idx < len(ordered_ids) - 1:
-                candidate = ordered_ids[idx + 1]
+            if idx < len(same_lang_ids) - 1:
+                candidate = same_lang_ids[idx + 1]
                 if statuses.get(candidate) != "locked":
                     next_id = candidate
 
@@ -126,6 +154,8 @@ class LearnerProgressService:
             title=quest.title,
             description=quest.description,
             level=quest.level,
+            xp_reward=getattr(quest, "xp_reward", 10) or 10,
+            language=getattr(quest, "language", None) or "python",
             order_rank=quest.order_rank,
             initial_code=quest.initial_code,
             explanation_unlocked=completed,

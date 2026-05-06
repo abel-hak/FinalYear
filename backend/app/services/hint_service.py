@@ -101,6 +101,7 @@ class HintService:
                 learner_code=payload.code,
                 last_output=payload.last_output,
                 hint_number=hint_number,
+                language=getattr(quest, "language", None) or "python",
             )
         except RuntimeError as exc:
             raise HintUnavailableError(str(exc)) from exc

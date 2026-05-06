@@ -9,7 +9,6 @@ from app.core.security import get_current_learner
 from app.models.user import User
 from app.schemas.quest import QuestSummary, QuestDetail
 from app.schemas.execute import SubmissionRequest, SubmissionResult
-from app.core.sandbox import run_python
 from app.services.learner_progress_service import (
     LearnerProgressService,
     QuestLockedError,
@@ -76,7 +75,6 @@ async def submit_quest(
             user_id=current_user.id,
             quest_id=quest_id,
             payload=payload,
-            run_code=run_python,
         )
     except SubmissionQuestNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=exc.message) from exc

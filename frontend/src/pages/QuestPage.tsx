@@ -177,6 +177,7 @@ const QuestPage: React.FC = () => {
   const [nextQuestId, setNextQuestId] = useState<string | null>(null);
   const [questLevel, setQuestLevel] = useState<number>(1);
   const [questTags, setQuestTags] = useState<string[]>([]);
+  const [questLanguage, setQuestLanguage] = useState<string>("python");
   const meta = id ? localQuestMeta[id] : undefined;
 
   const [code, setCode] = useState("");
@@ -220,6 +221,7 @@ const QuestPage: React.FC = () => {
         setDescription(quest.description);
         setInitialCode(quest.initial_code);
         setCode(quest.initial_code);
+        setQuestLanguage(quest.language ?? "python");
         setBackendExplanation(quest.explanation ?? null);
         setBackendExplanationUnlocked(quest.explanation_unlocked);
         setPrevQuestId(quest.prev_id ?? null);
@@ -549,6 +551,7 @@ const QuestPage: React.FC = () => {
                   code={code}
                   onChange={setCode}
                   onRun={handleRun}
+                  language={questLanguage}
                   errorLine={
                     feedback === "error" && meta ? meta.errorLine : undefined
                   }

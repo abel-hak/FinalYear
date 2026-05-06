@@ -8,14 +8,25 @@ interface CodeEditorProps {
   errorLine?: number;
   readOnly?: boolean;
   className?: string;
+  language?: string;
 }
+
+const LANGUAGE_FILENAMES: Record<string, string> = {
+  python: 'quest.py',
+  javascript: 'quest.js',
+  typescript: 'quest.ts',
+  java: 'Quest.java',
+  cpp: 'quest.cpp',
+  c: 'quest.c',
+};
 
 const CodeEditor: React.FC<CodeEditorProps> = ({
   code,
   onChange,
   onRun,
   readOnly = false,
-  className
+  className,
+  language,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -52,7 +63,9 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             <div className="w-3 h-3 rounded-full bg-warning/70" />
             <div className="w-3 h-3 rounded-full bg-success/70" />
           </div>
-          <span className="text-xs text-muted-foreground font-mono ml-2">quest.py</span>
+          <span className="text-xs text-muted-foreground font-mono ml-2">
+            {LANGUAGE_FILENAMES[(language ?? 'python').toLowerCase()] ?? 'quest.txt'}
+          </span>
         </div>
         <span className="text-xs text-muted-foreground font-mono">Ctrl+Enter to run</span>
       </div>

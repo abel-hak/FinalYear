@@ -237,7 +237,7 @@ async def test_submit_system_busy_on_sandbox_error(client: AsyncClient) -> None:
     quest = await _get_first_quest(client, token)
     quest_id = quest["id"]
 
-    with patch("app.api.quests.run_python", side_effect=OSError("sandbox unavailable")):
+    with patch("app.core.code_runner.run_python", side_effect=OSError("sandbox unavailable")):
         resp = await client.post(
             f"/api/v1/quests/{quest_id}/submit",
             json={"code": "print(1)"},

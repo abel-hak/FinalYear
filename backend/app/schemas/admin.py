@@ -54,6 +54,7 @@ class QuestAdminBase(BaseModel):
     description: str
     level: int
     xp_reward: int = 10
+    language: str = "python"
     order_rank: int
     initial_code: str
     solution_code: str
@@ -70,6 +71,7 @@ class QuestUpdate(BaseModel):
     description: Optional[str] = None
     level: Optional[int] = None
     xp_reward: Optional[int] = None
+    language: Optional[str] = None
     order_rank: Optional[int] = None
     initial_code: Optional[str] = None
     solution_code: Optional[str] = None
@@ -122,6 +124,7 @@ class LearningPathCreate(BaseModel):
     description: str
     level: int = 1
     order_rank: int = 0
+    language: str = "python"
 
 
 class LearningPathUpdate(BaseModel):
@@ -129,6 +132,7 @@ class LearningPathUpdate(BaseModel):
     description: Optional[str] = None
     level: Optional[int] = None
     order_rank: Optional[int] = None
+    language: Optional[str] = None
 
 
 class LearningPathQuestAdmin(BaseModel):
@@ -148,6 +152,7 @@ class LearningPathAdmin(BaseModel):
     description: str
     level: int
     order_rank: int
+    language: str = "python"
     quest_count: int = 0
 
     class Config:

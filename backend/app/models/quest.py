@@ -27,6 +27,7 @@ class Quest(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     level: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     xp_reward: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
+    language: Mapped[str] = mapped_column(String(32), default="python", nullable=False)
     order_rank: Mapped[int] = mapped_column(Integer, nullable=False, unique=True, index=True)
     initial_code: Mapped[str] = mapped_column(Text, nullable=False)
     solution_code: Mapped[str] = mapped_column(Text, nullable=False)

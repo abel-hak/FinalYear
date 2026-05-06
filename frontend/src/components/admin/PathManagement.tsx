@@ -132,6 +132,7 @@ export const PathManagement = () => {
     description: string;
     level: number;
     order_rank: number;
+    language: string;
   }) => {
     try {
       if (editingPath) {
@@ -239,10 +240,13 @@ export const PathManagement = () => {
                       <GripVertical className="w-4 h-4" />
                     </Button>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-1">
+                      <div className="flex items-center gap-3 mb-1 flex-wrap">
                         <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors truncate">{path.title}</h3>
                         <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                           Level {path.level}
+                        </Badge>
+                        <Badge variant="outline" className="bg-secondary/40 text-foreground border-border">
+                          {(path.language ?? "python").toUpperCase()}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-1">{path.description}</p>
@@ -383,6 +387,15 @@ export const PathManagement = () => {
   );
 };
 
+const LANGUAGE_OPTIONS: { value: string; label: string }[] = [
+  { value: "python", label: "Python" },
+  { value: "javascript", label: "JavaScript" },
+  { value: "typescript", label: "TypeScript" },
+  { value: "java", label: "Java" },
+  { value: "cpp", label: "C++" },
+  { value: "c", label: "C" },
+];
+
 const PathEditorDialog = ({
   open,
   onOpenChange,
@@ -394,12 +407,13 @@ const PathEditorDialog = ({
   onOpenChange: (open: boolean) => void;
   path: AdminLearningPathDto | null;
   nextOrderRank: number;
-  onSave: (data: { title: string; description: string; level: number; order_rank: number }) => void;
+  onSave: (data: { title: string; description: string; level: number; order_rank: number; language: string }) => void;
 }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [level, setLevel] = useState(1);
   const [orderRank, setOrderRank] = useState(1);
+  const [language, setLanguage] = useState<string>("python");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -408,6 +422,7 @@ const PathEditorDialog = ({
       setDescription(path?.description ?? "");
       setLevel(path?.level ?? 1);
       setOrderRank(path?.order_rank ?? nextOrderRank);
+      setLanguage(path?.language ?? "python");
     }
   }, [open, path, nextOrderRank]);
 
@@ -415,7 +430,7 @@ const PathEditorDialog = ({
     e.preventDefault();
     setSaving(true);
     try {
-      await onSave({ title, description, level, order_rank: orderRank });
+      await onSave({ title, description, level, order_rank: orderRank, language });
       onOpenChange(false);
     } finally {
       setSaving(false);
@@ -473,6 +488,24 @@ const PathEditorDialog = ({
                 className="mt-1"
               />
             </div>
+          </div>
+          <div>
+            <label className="text-sm font-medium">Language</label>
+            <Select value={language} onValueChange={setLanguage}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              Quests in a path should match this language. Progression is independent per language.
+            </p>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

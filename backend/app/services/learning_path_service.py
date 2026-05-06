@@ -28,6 +28,10 @@ class LearningPathService:
     def _quest_ids_for_path(path) -> set:
         return {pq.quest_id for pq in path.path_quests}
 
+    @staticmethod
+    def _path_language(path) -> str:
+        return (getattr(path, "language", None) or "python").lower()
+
     async def list_paths(self, *, current_user) -> list[LearningPathSummary]:
         paths = await self.path_repo.list_paths_with_quests()
 
@@ -37,16 +41,19 @@ class LearningPathService:
             if learner:
                 completed_ids = await self.path_repo.get_completed_quest_ids_for_learner(learner.id)
 
-        by_level: dict[int, list] = {}
+        # Group by (language, level) so each language progresses independently.
+        by_lang_level: dict[tuple[str, int], list] = {}
         for p in paths:
-            by_level.setdefault(getattr(p, "level", 1), []).append(p)
+            key = (self._path_language(p), getattr(p, "level", 1))
+            by_lang_level.setdefault(key, []).append(p)
 
         summaries: list[LearningPathSummary] = []
         for p in paths:
+            language = self._path_language(p)
             level = getattr(p, "level", 1)
             unlocked = True
             if level > 1 and current_user:
-                prev_paths = by_level.get(level - 1, [])
+                prev_paths = by_lang_level.get((language, level - 1), [])
                 if prev_paths:
                     prev_quest_ids = self._quest_ids_for_path(prev_paths[0])
                     unlocked = prev_quest_ids.issubset(completed_ids) if prev_quest_ids else True
@@ -61,6 +68,7 @@ class LearningPathService:
                     description=p.description,
                     level=level,
                     order_rank=p.order_rank,
+                    language=language,
                     quest_count=len(p.path_quests),
                     completed_count=completed_in_path,
                     unlocked=unlocked,
@@ -81,16 +89,20 @@ class LearningPathService:
         learner = await self.learner_repo.get_or_create_active_by_user_id(user_id)
         completed_ids = await self.path_repo.get_completed_quest_ids_for_learner(learner.id)
 
+        language = self._path_language(path)
         level = getattr(path, "level", 1)
         is_unlocked = True
         unlock_hint = None
         if level > 1:
-            prev_path = await self.path_repo.get_first_path_for_level(level - 1)
+            prev_path = await self.path_repo.get_first_path_for_language_level(language, level - 1)
             if prev_path:
                 prev_quest_ids = self._quest_ids_for_path(prev_path)
                 if prev_quest_ids and not prev_quest_ids.issubset(completed_ids):
                     is_unlocked = False
-                    unlock_hint = f"Complete all quests in Level {level - 1} to unlock this path."
+                    unlock_hint = (
+                        f"Complete all quests in the Level {level - 1} "
+                        f"{language.capitalize()} path to unlock this one."
+                    )
 
         quest_items: list[LearningPathQuestItem] = []
         previous_completed = True
@@ -127,6 +139,7 @@ class LearningPathService:
             description=path.description,
             level=level,
             order_rank=path.order_rank,
+            language=language,
             quests=quest_items,
             is_unlocked=is_unlocked,
             unlock_hint=unlock_hint,

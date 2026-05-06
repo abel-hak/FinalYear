@@ -44,10 +44,20 @@ interface QuestEditorDialogProps {
     explanation: string;
     tags: string[];
     expected_output: string;
+    language: string;
   }> | null;
   suggestedExpectedOutput?: string;
   clearSuggestedExpectedOutput?: () => void;
 }
+
+const LANGUAGE_OPTIONS: { value: string; label: string }[] = [
+  { value: "python", label: "Python" },
+  { value: "javascript", label: "JavaScript" },
+  { value: "typescript", label: "TypeScript" },
+  { value: "java", label: "Java" },
+  { value: "cpp", label: "C++" },
+  { value: "c", label: "C" },
+];
 
 export function QuestEditorDialog({
   open,
@@ -66,6 +76,7 @@ export function QuestEditorDialog({
   const [description, setDescription] = useState("");
   const [level, setLevel] = useState(1);
   const [orderRank, setOrderRank] = useState(1);
+  const [language, setLanguage] = useState<string>("python");
   const [initialCode, setInitialCode] = useState("");
   const [solutionCode, setSolutionCode] = useState("");
   const [explanation, setExplanation] = useState("");
@@ -84,6 +95,7 @@ export function QuestEditorDialog({
         setDescription(quest.description);
         setLevel(quest.level);
         setOrderRank(quest.order_rank);
+        setLanguage(quest.language ?? "python");
         setInitialCode(quest.initial_code);
         setSolutionCode(quest.solution_code);
         setExplanation(quest.explanation ?? "");
@@ -94,6 +106,7 @@ export function QuestEditorDialog({
         setDescription(prefill?.description ?? "");
         setLevel(prefill?.level ?? 1);
         setOrderRank(prefill?.order_rank ?? nextOrderRank);
+        setLanguage(prefill?.language ?? "python");
         setInitialCode(prefill?.initial_code ?? "");
         setSolutionCode(prefill?.solution_code ?? "");
         setExplanation(prefill?.explanation ?? "");
@@ -161,6 +174,7 @@ export function QuestEditorDialog({
           description: description.trim(),
           level,
           order_rank: orderRank,
+          language,
           initial_code: initialCode.trim(),
           solution_code: solutionCode.trim(),
           explanation: explanation.trim(),
@@ -173,6 +187,7 @@ export function QuestEditorDialog({
           description: description.trim(),
           level,
           order_rank: orderRank,
+          language,
           initial_code: initialCode.trim(),
           solution_code: solutionCode.trim(),
           explanation: explanation.trim(),
@@ -279,7 +294,7 @@ export function QuestEditorDialog({
               placeholder="e.g. loops, range, conditions"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="level">Level</Label>
               <Input
@@ -299,6 +314,21 @@ export function QuestEditorDialog({
                 value={orderRank}
                 onChange={(e) => setOrderRank(parseInt(e.target.value, 10) || 1)}
               />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="language">Language</Label>
+              <select
+                id="language"
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                {LANGUAGE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="grid gap-2">

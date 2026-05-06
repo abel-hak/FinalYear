@@ -30,8 +30,37 @@ _AI_CIRCUIT_OPEN_SECONDS = 60
 _AI_CACHE_TTL_SECONDS = 10 * 60  # 10 minutes
 
 
-def _cache_key(*, quest_title: str, quest_description: str, learner_code: str, last_output: str | None) -> str:
-    raw = "\n".join([quest_title, quest_description, learner_code, last_output or ""])
+def _language_for_prompt(language: str | None) -> tuple[str, str]:
+    """Map quest language to (markdown fence tag, human-readable name) for AI prompts."""
+    key = (language or "python").strip().lower()
+    fence = {
+        "python": "python",
+        "java": "java",
+        "cpp": "cpp",
+        "c": "c",
+        "javascript": "javascript",
+        "typescript": "typescript",
+    }.get(key, key if key else "text")
+    human = {
+        "python": "Python",
+        "java": "Java",
+        "cpp": "C++",
+        "c": "C",
+        "javascript": "JavaScript",
+        "typescript": "TypeScript",
+    }.get(key, key.replace("_", " ").title() if key else "the programming language")
+    return fence, human
+
+
+def _cache_key(
+    *,
+    language: str,
+    quest_title: str,
+    quest_description: str,
+    learner_code: str,
+    last_output: str | None,
+) -> str:
+    raw = "\n".join([language, quest_title, quest_description, learner_code, last_output or ""])
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
@@ -58,6 +87,7 @@ async def generate_hint(
     learner_code: str,
     last_output: str | None,
     hint_number: int | None = None,
+    language: str | None = None,
 ) -> str:
     """
     Call the configured AI model to generate a short, instructional hint.
@@ -74,7 +104,9 @@ async def generate_hint(
         raise RuntimeError("AI hints are temporarily unavailable. Please try again in a few moments.")
 
     stage = int(hint_number or 1)
+    fence, lang_human = _language_for_prompt(language)
     key = _cache_key(
+        language=fence,
         quest_title=quest_title,
         quest_description=quest_description,
         learner_code=learner_code,
@@ -103,9 +135,11 @@ async def generate_hint(
 
     system_prompt = (
         "You are a gentle debugging tutor for beginner programmers.\n"
-        "Given a quest description, the learner's current Python code, and the output/error, "
+        f"Given a quest description, the learner's current {lang_human} code, and the output/error, "
         "provide ONE short hint (2-3 sentences) that nudges them toward the fix.\n"
         "Rules:\n"
+        "- Assume the code is written in "
+        f"{lang_human}; use correct terminology and syntax patterns for that language only.\n"
         "- Do NOT give the full solution or rewrite the entire code.\n"
         "- Do NOT paste the final corrected code.\n"
         "- You may reference a line, variable, operator, or condition.\n"
@@ -113,9 +147,10 @@ async def generate_hint(
     )
 
     user_content = (
+        f"Programming language: {lang_human}\n"
         f"Quest title: {quest_title}\n"
         f"Quest description: {quest_description}\n\n"
-        f"Current code:\n```python\n{learner_code}\n```\n\n"
+        f"Current code:\n```{fence}\n{learner_code}\n```\n\n"
         f"Last output or error:\n{last_output or '(no output captured yet)'}\n"
     )
 
@@ -275,6 +310,7 @@ async def generate_failure_explanation(
     expected_output: str | None,
     actual_output: str | None,
     stderr: str | None,
+    language: str | None = None,
 ) -> dict:
     """
     Explain a failed submission:
@@ -291,21 +327,24 @@ async def generate_failure_explanation(
     if _circuit_open():
         raise RuntimeError("AI is temporarily unavailable. Please try again in a few moments.")
 
+    fence, lang_human = _language_for_prompt(language)
     system_prompt = (
-        "You are a debugging tutor for beginner Python programmers.\n"
-        "Given the quest description, the learner's code, the expected output, the actual output, and stderr, "
-        "explain the failure.\n"
+        f"You are a debugging tutor for beginner {lang_human} programmers.\n"
+        f"Given the quest description, the learner's {lang_human} code, the expected output, "
+        "the actual output, and stderr, explain the failure.\n"
         "Return ONLY valid JSON with keys: what_it_does, why_wrong, next_action.\n"
         "- what_it_does: 1–2 sentences describing what the current code actually does.\n"
         "- why_wrong: 1–3 sentences explaining the mismatch or bug (without giving the full solution).\n"
         "- next_action: one concrete step the learner should take next (e.g. 'check the condition on line 3').\n"
+        f"- Use {lang_human}-appropriate terminology; do not assume Python unless the language is Python.\n"
         "Do NOT include full corrected code. Do NOT leak the exact final answer."
     )
 
     user_prompt = (
+        f"Programming language: {lang_human}\n"
         f"Quest title: {quest_title}\n"
         f"Quest description: {quest_description}\n\n"
-        f"Learner code:\n```python\n{learner_code}\n```\n\n"
+        f"Learner code:\n```{fence}\n{learner_code}\n```\n\n"
         f"Expected output:\n{expected_output or '(not available)'}\n\n"
         f"Actual output:\n{actual_output or '(no output)'}\n\n"
         f"stderr / error:\n{stderr or '(empty)'}\n"

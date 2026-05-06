@@ -38,6 +38,7 @@ class AdminRepository:
             description=payload.description,
             level=payload.level,
             xp_reward=payload.xp_reward,
+            language=getattr(payload, "language", None) or "python",
             order_rank=payload.order_rank,
             initial_code=payload.initial_code,
             solution_code=payload.solution_code,
@@ -133,6 +134,7 @@ class AdminRepository:
             description=payload.description,
             level=payload.level,
             order_rank=payload.order_rank,
+            language=getattr(payload, "language", None) or "python",
         )
         self.db.add(path)
         await self.db.commit()

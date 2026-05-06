@@ -105,6 +105,7 @@ class AdminService:
                 description=path.description,
                 level=path.level,
                 order_rank=path.order_rank,
+                language=getattr(path, "language", None) or "python",
                 quest_count=len(path.path_quests),
             )
             for path in paths
@@ -118,6 +119,7 @@ class AdminService:
             description=path.description,
             level=path.level,
             order_rank=path.order_rank,
+            language=getattr(path, "language", None) or "python",
             quest_count=0,
         )
 
@@ -136,6 +138,7 @@ class AdminService:
             description=updated.description,
             level=updated.level,
             order_rank=updated.order_rank,
+            language=getattr(updated, "language", None) or "python",
             quest_count=len(updated.path_quests),
         )
 

@@ -17,10 +17,24 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
+const LANGUAGE_LABELS: Record<string, string> = {
+  python: "Python",
+  java: "Java",
+  cpp: "C++",
+  javascript: "JavaScript",
+  typescript: "TypeScript",
+  c: "C",
+};
+
+interface QuestWithLanguage extends Quest {
+  language: string;
+}
+
 const Quests: React.FC = () => {
   const [filter, setFilter] = React.useState<string>("all");
   const [tagFilter, setTagFilter] = React.useState<string>("all");
-  const [quests, setQuests] = React.useState<Quest[]>([]);
+  const [languageFilter, setLanguageFilter] = React.useState<string>("all");
+  const [quests, setQuests] = React.useState<QuestWithLanguage[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [lastActivityDate, setLastActivityDate] = React.useState<
@@ -36,7 +50,7 @@ const Quests: React.FC = () => {
         setLoading(true);
         const progress = await fetchProgress();
         if (cancelled) return;
-        const mapped: Quest[] = progress.quests.map((q) => {
+        const mapped: QuestWithLanguage[] = progress.quests.map((q) => {
           // Map backend status to frontend status
           const status =
             q.status === "completed"
@@ -51,6 +65,7 @@ const Quests: React.FC = () => {
               : q.level === 2
                 ? "intermediate"
                 : "advanced";
+          const language = (q.language ?? "python").toLowerCase();
           return {
             id: q.id,
             title: q.title,
@@ -58,9 +73,10 @@ const Quests: React.FC = () => {
             difficulty,
             category: `Level ${q.level}`,
             status,
-            xp: 50,
+            xp: q.xp_reward ?? 50,
             estimatedTime: "5 min",
             tags: q.tags ?? [],
+            language,
           };
         });
         setQuests(mapped);
@@ -87,7 +103,14 @@ const Quests: React.FC = () => {
     .filter((q) => q.status === "completed")
     .reduce((sum, q) => sum + q.xp, 0);
 
-  // Collect all unique tags for filter options
+  // Collect all languages and tags actually present in this learner's data
+  // so the filter chips reflect what's seeded.
+  const allLanguages = React.useMemo(() => {
+    const set = new Set<string>();
+    quests.forEach((q) => set.add(q.language));
+    return Array.from(set).sort();
+  }, [quests]);
+
   const allTags = React.useMemo(() => {
     const set = new Set<string>();
     quests.forEach((q) => (q.tags ?? []).forEach((t) => set.add(t)));
@@ -96,12 +119,14 @@ const Quests: React.FC = () => {
 
   const filteredQuests = React.useMemo(() => {
     let result = quests;
+    if (languageFilter !== "all")
+      result = result.filter((q) => q.language === languageFilter);
     if (filter !== "all")
       result = result.filter((q) => q.difficulty === filter);
     if (tagFilter !== "all")
       result = result.filter((q) => (q.tags ?? []).includes(tagFilter));
     return result;
-  }, [quests, filter, tagFilter]);
+  }, [quests, filter, tagFilter, languageFilter]);
 
   const getCosineOffset = React.useCallback((index: number) => {
     const amplitude = 170;
@@ -221,6 +246,50 @@ const Quests: React.FC = () => {
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div>
                         <h3 className="text-sm font-semibold text-foreground">
+                          Language
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          Pick a programming language to focus on.
+                        </p>
+                      </div>
+                      {languageFilter !== "all" && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-2 text-muted-foreground"
+                          onClick={() => setLanguageFilter("all")}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Clear
+                        </Button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant={languageFilter === "all" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setLanguageFilter("all")}
+                      >
+                        All
+                      </Button>
+                      {allLanguages.map((lang) => (
+                        <Button
+                          key={lang}
+                          variant={languageFilter === lang ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setLanguageFilter(lang)}
+                        >
+                          {LANGUAGE_LABELS[lang] ?? lang}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-card/70 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground">
                           Difficulty
                         </h3>
                         <p className="text-xs text-muted-foreground">
@@ -314,6 +383,7 @@ const Quests: React.FC = () => {
                     onClick={() => {
                       setFilter("all");
                       setTagFilter("all");
+                      setLanguageFilter("all");
                     }}
                   >
                     Reset all filters
@@ -331,6 +401,14 @@ const Quests: React.FC = () => {
               Active
             </span>
             <div className="flex flex-wrap gap-2">
+              <span className="rounded-full border border-border bg-background/60 px-3 py-1 text-xs text-muted-foreground">
+                Language:{" "}
+                <span className="font-medium text-foreground">
+                  {languageFilter === "all"
+                    ? "All"
+                    : LANGUAGE_LABELS[languageFilter] ?? languageFilter}
+                </span>
+              </span>
               <span className="rounded-full border border-border bg-background/60 px-3 py-1 text-xs text-muted-foreground">
                 Difficulty:{" "}
                 <span className="font-medium text-foreground capitalize">

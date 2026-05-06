@@ -13,6 +13,8 @@ export interface QuestSummaryDto {
   order_rank: number;
   status: QuestStatus;
   tags?: string[];
+  language?: string;
+  xp_reward?: number;
 }
 
 export interface ProgressSummaryDto {
@@ -29,6 +31,7 @@ export interface LearningPathSummaryDto {
   description: string;
   level: number;
   order_rank: number;
+  language?: string;
   quest_count: number;
   completed_count?: number;
   unlocked?: boolean;
@@ -50,6 +53,7 @@ export interface LearningPathDetailDto {
   description: string;
   level: number;
   order_rank: number;
+  language?: string;
   quests: LearningPathQuestItemDto[];
   is_unlocked?: boolean;
   unlock_hint?: string | null;
@@ -78,6 +82,8 @@ export interface QuestDetailDto {
   tags?: string[];
   prev_id?: string | null;
   next_id?: string | null;
+  language?: string;
+  xp_reward?: number;
 }
 
 export interface SubmissionResultDto {
@@ -121,6 +127,8 @@ export interface AdminQuestDto {
   explanation: string | null;
   tags?: string[];
   is_deleted: boolean;
+  language?: string;
+  xp_reward?: number;
 }
 
 export interface QuestQualityIssueDto {
@@ -604,6 +612,8 @@ export async function updateAdminQuest(
     solution_code: string;
     explanation: string;
     tags: string[];
+    language: string;
+    xp_reward: number;
   }>
 ): Promise<AdminQuestDto> {
   const token = getToken();
@@ -731,6 +741,7 @@ export interface AdminLearningPathDto {
   description: string;
   level: number;
   order_rank: number;
+  language?: string;
   quest_count: number;
 }
 
@@ -751,6 +762,7 @@ export async function createAdminLearningPath(payload: {
   description: string;
   level: number;
   order_rank: number;
+  language?: string;
 }): Promise<AdminLearningPathDto> {
   const token = getToken();
   if (!token) throw new Error("Not authenticated");
@@ -771,7 +783,7 @@ export async function createAdminLearningPath(payload: {
 
 export async function updateAdminLearningPath(
   pathId: string,
-  payload: Partial<{ title: string; description: string; level: number; order_rank: number }>
+  payload: Partial<{ title: string; description: string; level: number; order_rank: number; language: string }>
 ): Promise<AdminLearningPathDto> {
   const token = getToken();
   if (!token) throw new Error("Not authenticated");
@@ -847,6 +859,8 @@ export async function createAdminQuest(payload: {
   solution_code: string;
   explanation: string;
   tags?: string[];
+  language?: string;
+  xp_reward?: number;
 }): Promise<AdminQuestDto> {
   const token = getToken();
   if (!token) {

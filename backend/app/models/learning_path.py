@@ -22,6 +22,10 @@ class LearningPath(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     level: Mapped[int] = mapped_column(Integer, nullable=False, default=1)  # 1=Beginner, 2=Intermediate, 3=Advanced
     order_rank: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Programming language this path teaches; lets quests/paths progress
+    # independently per language (e.g. Java level 2 unlocks when Java level 1
+    # is done, regardless of Python progress).
+    language: Mapped[str] = mapped_column(String(32), default="python", nullable=False)
 
     path_quests: Mapped[list["LearningPathQuest"]] = relationship(
         "LearningPathQuest",

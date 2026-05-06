@@ -9,6 +9,7 @@ class QuestBase(BaseModel):
     description: str
     level: int
     xp_reward: int = 10
+    language: str = "python"
     order_rank: int
 
 

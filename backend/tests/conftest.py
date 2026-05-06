@@ -36,6 +36,12 @@ def _load_test_env_file() -> None:
 
 _load_test_env_file()
 
+# Tests must never hit external code-execution providers. Force the local
+# subprocess sandbox regardless of any developer .env configuration. We blank
+# JUDGE0_BASE_URL so the runner factory falls through to USE_LOCAL_SANDBOX.
+os.environ["JUDGE0_BASE_URL"] = ""
+os.environ["USE_LOCAL_SANDBOX"] = "true"
+
 
 def _validate_db_name(name: str) -> None:
     """Allow only safe PostgreSQL identifier characters for dynamic DB names."""

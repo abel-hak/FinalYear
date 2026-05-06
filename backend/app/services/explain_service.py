@@ -45,6 +45,7 @@ class ExplainService:
                 expected_output=payload.expected_output,
                 actual_output=payload.actual_output,
                 stderr=payload.stderr,
+                language=getattr(quest, "language", None) or "python",
             )
         except RuntimeError as exc:
             raise ExplainUnavailableError(str(exc)) from exc

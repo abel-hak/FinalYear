@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Callable
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.core.code_runner import CodeRunner, CodeRunnerError, get_code_runner
 from app.repositories.learner_repository import LearnerRepository
 from app.repositories.quest_repository import QuestRepository
 from app.repositories.submission_repository import SubmissionRepository
@@ -34,11 +34,18 @@ class SubmissionRateLimitError(Exception):
 class QuestSubmissionService:
     """Application service for quest code submission workflow."""
 
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: AsyncSession, *, code_runner: CodeRunner | None = None) -> None:
         self.db = db
         self.learner_repo = LearnerRepository(db)
         self.quest_repo = QuestRepository(db)
         self.submission_repo = SubmissionRepository(db)
+        self._code_runner = code_runner
+
+    def _get_runner(self) -> CodeRunner:
+        # Resolve lazily so settings changes (e.g. test fixtures) are honored.
+        if self._code_runner is None:
+            self._code_runner = get_code_runner()
+        return self._code_runner
 
     async def submit(
         self,
@@ -46,7 +53,6 @@ class QuestSubmissionService:
         user_id,
         quest_id,
         payload: SubmissionRequest,
-        run_code: Callable,
     ) -> SubmissionResult:
         quest = await self.quest_repo.get_active_by_id(quest_id)
         if not quest:
@@ -66,8 +72,17 @@ class QuestSubmissionService:
                 f"Rate limit exceeded. Maximum {limit} code submissions per minute. Please wait before trying again."
             )
 
+        # Quests are Python-only until Phase 3 introduces per-quest language.
+        language = getattr(quest, "language", None) or "python"
+
         try:
-            sandbox_result = run_code(payload.code, timeout_seconds=5)
+            sandbox_result = await self._get_runner().run(
+                language=language,
+                source=payload.code,
+                timeout_seconds=5,
+            )
+        except CodeRunnerError as exc:
+            raise SubmissionSystemBusyError("System Busy. Please try again later.") from exc
         except Exception as exc:
             raise SubmissionSystemBusyError("System Busy. Please try again later.") from exc
 

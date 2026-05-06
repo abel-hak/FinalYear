@@ -30,6 +30,15 @@ class Settings(BaseSettings):
     ai_api_key: str | None = None
     ai_model: str = "gpt-4o-mini"
 
+    # Judge0 code execution (used for sandboxed multi-language submissions).
+    # Dev: RapidAPI Judge0 CE. Prod: self-hosted Judge0 instance.
+    judge0_base_url: str | None = None  # e.g. "https://judge0-ce.p.rapidapi.com"
+    judge0_api_key: str | None = None  # RapidAPI key (only needed for RapidAPI host)
+    judge0_api_host: str | None = None  # e.g. "judge0-ce.p.rapidapi.com"
+    judge0_timeout_seconds: int = 10
+    # Local sandbox fallback: only enable in dev/offline; never in production.
+    use_local_sandbox: bool = False
+
     # Rate limiting (NFR-01.4, NFR-10.3)
     submission_rate_limit_per_minute: int = 5
 

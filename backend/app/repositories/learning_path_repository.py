@@ -42,6 +42,23 @@ class LearningPathRepository:
         )
         return result.scalar_one_or_none()
 
+    async def get_first_path_for_language_level(
+        self, language: str, level: int
+    ) -> LearningPath | None:
+        """Per-language version of get_first_path_for_level.
+
+        Used by the path-detail unlock check so e.g. Java level 2 only requires
+        completion of Java level 1, regardless of any Python-language paths.
+        """
+        result = await self.db.execute(
+            select(LearningPath)
+            .options(selectinload(LearningPath.path_quests))
+            .where(LearningPath.level == level, LearningPath.language == language)
+            .order_by(LearningPath.order_rank)
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
     async def get_completed_quest_ids_for_learner(self, learner_id) -> set:
         result = await self.db.execute(
             select(Submission.quest_id)
