@@ -21,12 +21,23 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Set sqlalchemy.url from our env (sync URL)
-settings = get_settings()
-sync_url = (
-    settings.database_url_sync
-    if settings.database_url_sync
-    else settings.database_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
-)
+# Plain "postgresql://..." makes SQLAlchemy 2 default to psycopg2, which we do not
+# install (we use psycopg3). Hosting envs often supply the bare form — force psycopg3.
+def _sync_url_for_alembic() -> str:
+    settings = get_settings()
+    url = (
+        settings.database_url_sync
+        if settings.database_url_sync
+        else settings.database_url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+    )
+    if url.startswith("postgresql+asyncpg://"):
+        url = url.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+    elif url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return url
+
+
+sync_url = _sync_url_for_alembic()
 config.set_main_option("sqlalchemy.url", sync_url)
 
 target_metadata = Base.metadata
