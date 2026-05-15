@@ -135,6 +135,7 @@ class AdminRepository:
             level=payload.level,
             order_rank=payload.order_rank,
             language=getattr(payload, "language", None) or "python",
+            checkpoint_quest_id=getattr(payload, "checkpoint_quest_id", None),
         )
         self.db.add(path)
         await self.db.commit()

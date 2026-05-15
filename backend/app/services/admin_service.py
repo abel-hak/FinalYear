@@ -107,6 +107,7 @@ class AdminService:
                 order_rank=path.order_rank,
                 language=getattr(path, "language", None) or "python",
                 quest_count=len(path.path_quests),
+                checkpoint_quest_id=getattr(path, "checkpoint_quest_id", None),
             )
             for path in paths
         ]
@@ -121,6 +122,7 @@ class AdminService:
             order_rank=path.order_rank,
             language=getattr(path, "language", None) or "python",
             quest_count=0,
+            checkpoint_quest_id=getattr(path, "checkpoint_quest_id", None),
         )
 
     async def update_learning_path(self, *, path_id, payload) -> LearningPathAdmin:

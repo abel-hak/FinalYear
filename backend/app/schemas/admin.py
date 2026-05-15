@@ -125,6 +125,7 @@ class LearningPathCreate(BaseModel):
     level: int = 1
     order_rank: int = 0
     language: str = "python"
+    checkpoint_quest_id: UUID4 | None = None
 
 
 class LearningPathUpdate(BaseModel):
@@ -133,6 +134,7 @@ class LearningPathUpdate(BaseModel):
     level: Optional[int] = None
     order_rank: Optional[int] = None
     language: Optional[str] = None
+    checkpoint_quest_id: Optional[UUID4] = None
 
 
 class LearningPathQuestAdmin(BaseModel):
@@ -154,6 +156,7 @@ class LearningPathAdmin(BaseModel):
     order_rank: int
     language: str = "python"
     quest_count: int = 0
+    checkpoint_quest_id: UUID4 | None = None
 
     class Config:
         from_attributes = True

@@ -53,10 +53,19 @@ class LearningPathService:
             level = getattr(p, "level", 1)
             unlocked = True
             if level > 1 and current_user:
+                # First, allow checkpoint-based unlock if configured for this path
+                checkpoint_ok = False
+                if getattr(p, "checkpoint_quest_id", None):
+                    checkpoint_ok = p.checkpoint_quest_id in completed_ids
+
                 prev_paths = by_lang_level.get((language, level - 1), [])
                 if prev_paths:
                     prev_quest_ids = self._quest_ids_for_path(prev_paths[0])
-                    unlocked = prev_quest_ids.issubset(completed_ids) if prev_quest_ids else True
+                    prev_ok = prev_quest_ids.issubset(completed_ids) if prev_quest_ids else True
+                else:
+                    prev_ok = True
+
+                unlocked = checkpoint_ok or prev_ok
 
             path_quest_ids = self._quest_ids_for_path(p)
             completed_in_path = len(path_quest_ids.intersection(completed_ids)) if path_quest_ids else 0
@@ -94,15 +103,26 @@ class LearningPathService:
         is_unlocked = True
         unlock_hint = None
         if level > 1:
-            prev_path = await self.path_repo.get_first_path_for_language_level(language, level - 1)
-            if prev_path:
-                prev_quest_ids = self._quest_ids_for_path(prev_path)
-                if prev_quest_ids and not prev_quest_ids.issubset(completed_ids):
-                    is_unlocked = False
-                    unlock_hint = (
-                        f"Complete all quests in the Level {level - 1} "
-                        f"{language.capitalize()} path to unlock this one."
-                    )
+            # If a checkpoint quest is configured and the learner has passed it, unlock.
+            if getattr(path, "checkpoint_quest_id", None) and path.checkpoint_quest_id in completed_ids:
+                is_unlocked = True
+            else:
+                prev_path = await self.path_repo.get_first_path_for_language_level(language, level - 1)
+                if prev_path:
+                    prev_quest_ids = self._quest_ids_for_path(prev_path)
+                    if prev_quest_ids and not prev_quest_ids.issubset(completed_ids):
+                        is_unlocked = False
+                        # Build unlock hint; also mention checkpoint option if available
+                        if getattr(path, "checkpoint_quest_id", None) and path.checkpoint_quest:
+                            unlock_hint = (
+                                f"Solve the checkpoint quest '{path.checkpoint_quest.title}' "
+                                f"or complete all quests in the Level {level - 1} {language.capitalize()} path to unlock this one."
+                            )
+                        else:
+                            unlock_hint = (
+                                f"Complete all quests in the Level {level - 1} "
+                                f"{language.capitalize()} path to unlock this one."
+                            )
 
         quest_items: list[LearningPathQuestItem] = []
         previous_completed = True
@@ -143,4 +163,14 @@ class LearningPathService:
             quests=quest_items,
             is_unlocked=is_unlocked,
             unlock_hint=unlock_hint,
+            checkpoint_quest_info=(
+                {
+                    "id": str(path.checkpoint_quest.id),
+                    "title": path.checkpoint_quest.title,
+                    "description": path.checkpoint_quest.description,
+                    "level": path.checkpoint_quest.level,
+                }
+                if getattr(path, "checkpoint_quest", None)
+                else None
+            ),
         )

@@ -27,6 +27,19 @@ class LearningPath(Base):
     # is done, regardless of Python progress).
     language: Mapped[str] = mapped_column(String(32), default="python", nullable=False)
 
+    # Optional checkpoint quest which, if completed by a learner, unlocks this path
+    checkpoint_quest_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("quests.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+    checkpoint_quest: Mapped["Quest | None"] = relationship(
+        "Quest",
+        foreign_keys=[checkpoint_quest_id],
+        lazy="joined",
+    )
+
     path_quests: Mapped[list["LearningPathQuest"]] = relationship(
         "LearningPathQuest",
         back_populates="learning_path",

@@ -39,3 +39,6 @@ class LearningPathDetail(BaseModel):
     quests: list[LearningPathQuestItem]
     is_unlocked: bool = True
     unlock_hint: str | None = None  # e.g. "Complete Level 1 to unlock"
+
+    # Optional checkpoint quest info exposed to learners when a path is locked
+    checkpoint_quest_info: dict | None = None
