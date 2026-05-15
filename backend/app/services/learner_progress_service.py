@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.learner_repository import LearnerRepository
 from app.repositories.learning_path_repository import LearningPathRepository
 from app.repositories.progress_repository import ProgressRepository
+from app.repositories.submission_repository import SubmissionRepository
 from app.schemas.progress import ProgressSummary, ReviewSuggestion
 from app.schemas.quest import QuestDetail, QuestSummary
 from app.services.points_service import PointsService
@@ -33,6 +34,7 @@ class LearnerProgressService:
         self.learner_repo = LearnerRepository(db)
         self.path_repo = LearningPathRepository(db)
         self.progress_repo = ProgressRepository(db)
+        self.submission_repo = SubmissionRepository(db)
         self.points_service = PointsService(db)
 
     @staticmethod
@@ -171,6 +173,8 @@ class LearnerProgressService:
             tags=quest.tags if quest.tags else [],
             prev_id=prev_id,
             next_id=next_id,
+            failed_attempts_count=0 if completed else await self.submission_repo.count_failed_attempts_before_pass(learner.id, quest.id),
+            xp_penalty_preview=0 if completed else await self.submission_repo.count_failed_attempts_before_pass(learner.id, quest.id),
         )
 
     async def get_review_suggestions_for_user(self, user_id, review_interval_days: int = 7) -> list[ReviewSuggestion]:

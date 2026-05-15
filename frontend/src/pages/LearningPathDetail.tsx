@@ -1,10 +1,11 @@
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import Header from '@/components/Header';
-import { Check, Lock, ChevronRight, BookOpen, ExternalLink } from 'lucide-react';
+import { Check, Lock, ChevronRight, BookOpen, ExternalLink, Sparkles } from 'lucide-react';
 import { fetchLearningPathDetail, type LearningPathDetailDto, type LearningPathQuestItemDto } from '@/api/backend';
 import { getAggregatedResources, getBestUrlForConcept } from '@/lib/conceptResources';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 const LearningPathDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -207,11 +208,17 @@ const QuestStep: React.FC<{
             </div>
           )}
         </div>
-        {canAccess ? (
-          <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
-        ) : (
-          <Lock className="w-5 h-5 text-muted-foreground shrink-0" />
-        )}
+        <div className="flex items-center gap-3 shrink-0">
+          <Badge className="flex items-center gap-1 bg-amber-500/30 text-white border-0 font-semibold whitespace-nowrap">
+            <Sparkles className="w-3 h-3" />
+            {quest.xp_reward ?? 10} XP
+          </Badge>
+          {canAccess ? (
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          ) : (
+            <Lock className="w-5 h-5 text-muted-foreground" />
+          )}
+        </div>
       </div>
     </Link>
   );

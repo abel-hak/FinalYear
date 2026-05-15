@@ -40,6 +40,8 @@ const Quests: React.FC = () => {
   const [lastActivityDate, setLastActivityDate] = React.useState<
     string | null | undefined
   >(undefined);
+  const [totalPointsFromProgress, setTotalPointsFromProgress] =
+    React.useState(0);
   const [dismissedBanner, setDismissedBanner] = React.useState(false);
   const [filtersOpen, setFiltersOpen] = React.useState(false);
 
@@ -66,6 +68,7 @@ const Quests: React.FC = () => {
                 ? "intermediate"
                 : "advanced";
           const language = (q.language ?? "python").toLowerCase();
+          // Use xp_reward from API (custom XP values per quest), not derived from level
           return {
             id: q.id,
             title: q.title,
@@ -81,6 +84,7 @@ const Quests: React.FC = () => {
         });
         setQuests(mapped);
         setLastActivityDate(progress.last_activity_date ?? null);
+        setTotalPointsFromProgress(progress.total_points ?? 0);
         setError(null);
       } catch (e: any) {
         if (!cancelled) {
@@ -99,9 +103,9 @@ const Quests: React.FC = () => {
   }, []);
 
   const completedCount = quests.filter((q) => q.status === "completed").length;
-  const totalXP = quests
-    .filter((q) => q.status === "completed")
-    .reduce((sum, q) => sum + q.xp, 0);
+  // Use total_points from progress API (lifetime XP = quest XP + achievement XP)
+  // This ensures consistency with the Achievements page
+  const totalXP = totalPointsFromProgress;
 
   // Collect all languages and tags actually present in this learner's data
   // so the filter chips reflect what's seeded.

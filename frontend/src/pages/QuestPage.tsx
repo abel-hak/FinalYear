@@ -178,6 +178,9 @@ const QuestPage: React.FC = () => {
   const [questLevel, setQuestLevel] = useState<number>(1);
   const [questTags, setQuestTags] = useState<string[]>([]);
   const [questLanguage, setQuestLanguage] = useState<string>("python");
+  const [xpReward, setXpReward] = useState<number>(10);
+  const [failedAttempts, setFailedAttempts] = useState<number>(0);
+  const [xpPenalty, setXpPenalty] = useState<number>(0);
   const meta = id ? localQuestMeta[id] : undefined;
 
   const [code, setCode] = useState("");
@@ -228,6 +231,9 @@ const QuestPage: React.FC = () => {
         setNextQuestId(quest.next_id ?? null);
         setQuestLevel(quest.level ?? 1);
         setQuestTags(Array.isArray(quest.tags) ? quest.tags : []);
+        setXpReward(quest.xp_reward ?? 10);
+        setFailedAttempts(quest.failed_attempts_count ?? 0);
+        setXpPenalty(quest.xp_penalty_preview ?? 0);
         setLoadError(null);
         setFeedback("none");
         setOutput("");
@@ -253,12 +259,21 @@ const QuestPage: React.FC = () => {
   // Update mascot and stop timer on success
   useEffect(() => {
     if (feedback === "success") {
+      const earnedXp = Math.max(1, xpReward - xpPenalty);
       setMascotMood("celebrating");
-      setMascotMessage("🎉 Amazing! You squashed that bug!");
+      const message =
+        xpPenalty > 0
+          ? `🎉 Amazing! You earned ${earnedXp} XP (${xpReward} - ${xpPenalty} penalty)!`
+          : "🎉 Amazing! You squashed that bug!";
+      setMascotMessage(message);
       setIsTimerRunning(false); // Stop the timer
     } else if (feedback === "error") {
       setMascotMood("encouraging");
-      setMascotMessage("Don't give up! Check the hints if you're stuck.");
+      const message =
+        xpPenalty > 0
+          ? `Don't give up! You have ${xpPenalty} penalties (-${xpPenalty} XP). Check the hints if you're stuck.`
+          : "Don't give up! Check the hints if you're stuck.";
+      setMascotMessage(message);
     } else if (feedback === "system_busy") {
       setMascotMood("encouraging");
       setMascotMessage("The system is a bit busy. Try again in a moment!");
@@ -266,7 +281,7 @@ const QuestPage: React.FC = () => {
       setMascotMood("sad");
       setMascotMessage("Time's running short! Need a hint?");
     }
-  }, [feedback]);
+  }, [feedback, xpPenalty, xpReward]);
 
   // Timer effect
   useEffect(() => {
@@ -325,18 +340,29 @@ const QuestPage: React.FC = () => {
           colors: ["#a855f7", "#ec4899", "#eab308"],
         });
         // Refresh quest detail so navigation updates (next quest becomes unlocked/current).
+        // Also update penalty info (now 0 since quest is completed).
         try {
           const q = await fetchQuestDetail(id);
           setPrevQuestId(q.prev_id ?? null);
           setNextQuestId(q.next_id ?? null);
           setBackendExplanation(q.explanation ?? null);
           setBackendExplanationUnlocked(q.explanation_unlocked);
+          setFailedAttempts(q.failed_attempts_count ?? 0);
+          setXpPenalty(q.xp_penalty_preview ?? 0);
         } catch {
           // Ignore refresh errors; success state already shown.
         }
       } else {
         setFeedback("error");
         playErrorSound();
+        // Refetch to update penalty count after failed submission
+        try {
+          const q = await fetchQuestDetail(id);
+          setFailedAttempts(q.failed_attempts_count ?? 0);
+          setXpPenalty(q.xp_penalty_preview ?? 0);
+        } catch {
+          // Ignore refresh errors
+        }
       }
       // Show expected vs actual on failure (first non-hidden failing test case)
       if (!result.passed) {
@@ -535,7 +561,9 @@ const QuestPage: React.FC = () => {
                 className="flex items-center gap-2 text-base px-4 py-2 shrink-0"
               >
                 <Sparkles className="w-4 h-4" />
-                {questLevel <= 1 ? 50 : questLevel === 2 ? 75 : 100} XP
+                {xpPenalty > 0
+                  ? `${xpReward} XP - ${xpPenalty} penalty = ${Math.max(1, xpReward - xpPenalty)} you'll earn`
+                  : `${xpReward} XP`}
               </Badge>
             </div>
 

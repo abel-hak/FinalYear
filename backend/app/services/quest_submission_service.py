@@ -133,7 +133,12 @@ class QuestSubmissionService:
         )
 
         if passed and not already_completed:
-            learner.total_points += int(getattr(quest, "xp_reward", 10) or 0)
+            base_xp = int(getattr(quest, "xp_reward", 10) or 0)
+            # Count failed attempts before this successful submission
+            failed_count = await self.submission_repo.count_failed_attempts_before_pass(learner.id, quest.id)
+            # Apply penalty: deduct 1 XP per failed attempt, but never award less than 1 XP
+            final_xp = max(1, base_xp - failed_count)
+            learner.total_points += final_xp
             if quest.level > learner.current_level:
                 learner.current_level = quest.level
 

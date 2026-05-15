@@ -34,6 +34,22 @@ class SubmissionRepository:
         )
         return result.scalar_one_or_none() is not None
 
+    async def count_failed_attempts_before_pass(self, learner_id, quest_id) -> int:
+        """Count failed submissions for this learner-quest pair before any passing submission.
+        
+        Used to calculate XP penalty. Once a quest is passed, penalties reset (don't apply retroactively).
+        """
+        result = await self.db.execute(
+            select(func.count())
+            .select_from(Submission)
+            .where(
+                Submission.learner_id == learner_id,
+                Submission.quest_id == quest_id,
+                Submission.passed.is_(False),
+            )
+        )
+        return int(result.scalar() or 0)
+
     def add_submission(self, *, learner_id, quest_id, code: str, passed: bool, output_log: str) -> None:
         self.db.add(
             Submission(

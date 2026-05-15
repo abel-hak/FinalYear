@@ -119,12 +119,8 @@ const Achievements: React.FC = () => {
 
         setError(null);
 
-        // Calculate total XP
-        const totalXPFromAchievements = list
-          .filter((a) => a.unlocked)
-          .reduce((sum, a) => sum + a.xp, 0);
-
-        setTotalXP(totalXPFromAchievements + totalPointsFromQuests);
+        // Use total_points from progress API (already includes achievement XP via PointsService)
+        setTotalXP(totalPointsFromQuests);
       } catch (e) {
         console.error(e);
         setError(
@@ -139,9 +135,6 @@ const Achievements: React.FC = () => {
   }, []);
 
   const unlockedCount = achievements.filter((a) => a.unlocked).length;
-  const totalXPFromAchievements = achievements
-    .filter((a) => a.unlocked)
-    .reduce((sum, a) => sum + a.xp, 0);
   const filtered = achievements.filter((a) => {
     if (filter === "all") return true;
     if (filter === "unlocked") return a.unlocked;

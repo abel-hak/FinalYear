@@ -247,3 +247,132 @@ async def test_submit_system_busy_on_sandbox_error(client: AsyncClient) -> None:
     body = resp.json()
     assert "detail" in body
     assert "system busy" in body["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_xp_penalty_deduction_for_failed_attempts(client: AsyncClient) -> None:
+    """Failed submissions incur a 1 XP penalty per failed attempt (min 1 XP)."""
+    admin_token = await _admin_token(client)
+    quest_id, xp_reward = await _create_quest_with_xp(client, admin_token, xp_reward=5)
+
+    learner_token = await _register_and_login_fresh_learner(client)
+
+    # Submit wrong code 3 times
+    for i in range(3):
+        resp = await client.post(
+            f"/api/v1/quests/{quest_id}/submit",
+            json={"code": "print(1)"},  # Wrong code
+            headers={"Authorization": f"Bearer {learner_token}"},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["passed"] is False, f"Submission {i+1} should fail"
+
+    # Submit correct code - should earn (5 - 3) = 2 XP
+    resp = await client.post(
+        f"/api/v1/quests/{quest_id}/submit",
+        json={"code": "print(5)"},  # Correct code
+        headers={"Authorization": f"Bearer {learner_token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["passed"] is True
+
+    # Check that penalty was applied: 5 - 3 failed = 2 XP from quest
+    # Plus first_fix (50) and no_ai_hints_1 (150) = 2 + 50 + 150 = 202
+    progress = await client.get(
+        "/api/v1/progress",
+        headers={"Authorization": f"Bearer {learner_token}"},
+    )
+    assert progress.status_code == 200, progress.text
+    body = progress.json()
+    assert body["total_points"] == 2 + 50 + 150, f"Expected 202, got {body['total_points']}"
+
+
+@pytest.mark.asyncio
+async def test_xp_penalty_minimum_floor_is_1_xp(client: AsyncClient) -> None:
+    """XP penalty never reduces final reward below 1 XP."""
+    admin_token = await _admin_token(client)
+    quest_id, xp_reward = await _create_quest_with_xp(client, admin_token, xp_reward=2)
+
+    learner_token = await _register_and_login_fresh_learner(client)
+
+    # Submit wrong code 100 times (penalty would be 100, but floored at 1)
+    for i in range(100):
+        resp = await client.post(
+            f"/api/v1/quests/{quest_id}/submit",
+            json={"code": "print(1)"},  # Wrong code
+            headers={"Authorization": f"Bearer {learner_token}"},
+        )
+        assert resp.status_code == 200, resp.text
+        if i < 99:  # First 99 should fail
+            assert resp.json()["passed"] is False
+
+    # Submit correct code - should earn max(1, 2 - 100) = 1 XP (not 0 or negative)
+    resp = await client.post(
+        f"/api/v1/quests/{quest_id}/submit",
+        json={"code": "print(5)"},  # Correct code
+        headers={"Authorization": f"Bearer {learner_token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["passed"] is True
+
+    # Check that min 1 XP was awarded: 1 (quest, floored) + 50 (first_fix) + 150 (no_ai_hints_1) = 201
+    progress = await client.get(
+        "/api/v1/progress",
+        headers={"Authorization": f"Bearer {learner_token}"},
+    )
+    assert progress.status_code == 200, progress.text
+    body = progress.json()
+    assert body["total_points"] == 1 + 50 + 150, f"Expected 201, got {body['total_points']}"
+
+
+@pytest.mark.asyncio
+async def test_penalty_reset_after_quest_pass(client: AsyncClient) -> None:
+    """After a quest is passed, attempting it again (impossible in normal flow) doesn't incur penalties."""
+    admin_token = await _admin_token(client)
+    quest_id, xp_reward = await _create_quest_with_xp(client, admin_token, xp_reward=10)
+
+    learner_token = await _register_and_login_fresh_learner(client)
+
+    # Submit wrong code once
+    resp = await client.post(
+        f"/api/v1/quests/{quest_id}/submit",
+        json={"code": "print(1)"},
+        headers={"Authorization": f"Bearer {learner_token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["passed"] is False
+
+    # Submit correct code - should earn (10 - 1) = 9 XP
+    resp = await client.post(
+        f"/api/v1/quests/{quest_id}/submit",
+        json={"code": "print(5)"},
+        headers={"Authorization": f"Bearer {learner_token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["passed"] is True
+
+    progress = await client.get(
+        "/api/v1/progress",
+        headers={"Authorization": f"Bearer {learner_token}"},
+    )
+    assert progress.status_code == 200, progress.text
+    body = progress.json()
+    # 9 (quest with penalty) + 50 (first_fix) + 150 (no_ai_hints_1) = 209
+    assert body["total_points"] == 9 + 50 + 150, f"Expected 209, got {body['total_points']}"
+
+    # Try to submit again (normally impossible since quest is completed, but if we could, no new XP awarded)
+    resp = await client.post(
+        f"/api/v1/quests/{quest_id}/submit",
+        json={"code": "print(5)"},
+        headers={"Authorization": f"Bearer {learner_token}"},
+    )
+    assert resp.status_code == 200, resp.text
+    # Should be marked as passed, but no additional XP
+    progress = await client.get(
+        "/api/v1/progress",
+        headers={"Authorization": f"Bearer {learner_token}"},
+    )
+    assert progress.status_code == 200, progress.text
+    body = progress.json()
+    # Total should still be 209 (no new XP added for re-submission)
+    assert body["total_points"] == 209, f"Expected 209 (no new XP), got {body['total_points']}"

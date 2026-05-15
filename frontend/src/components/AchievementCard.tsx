@@ -10,6 +10,7 @@ interface AchievementCardData {
   title: string;
   description: string;
   icon: React.ReactNode;
+  xp: number;
   unlocked: boolean;
   progress?: { current: number; max: number };
   rarity: AchievementRarity;
@@ -173,6 +174,16 @@ const AchievementCard: React.FC<AchievementCardProps> = ({ achievement }) => {
       >
         {achievement.description}
       </p>
+
+      <div className="flex gap-2 mb-4">
+        <Badge
+          variant="gold"
+          className="flex items-center gap-1 bg-amber-500/40 dark:bg-amber-600/50 text-white dark:text-amber-50 border-0 font-semibold"
+        >
+          <Sparkles className="w-3 h-3" />
+          {achievement.xp} XP
+        </Badge>
+      </div>
 
       {progress && !unlocked ? (
         <div className="space-y-2">

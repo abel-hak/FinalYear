@@ -50,6 +50,7 @@ export interface LearningPathQuestItemDto {
   title: string;
   description: string;
   level: number;
+  xp_reward?: number;
   order_rank: number;
   status: "completed" | "current" | "locked";
   tags?: string[];

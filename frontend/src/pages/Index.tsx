@@ -85,7 +85,7 @@ const Index = () => {
             difficulty,
             category: `Level ${q.level}`,
             status,
-            xp: 50,
+            xp: q.xp_reward ?? 50,
             estimatedTime: "5 min",
             tags: q.tags ?? [],
           };
