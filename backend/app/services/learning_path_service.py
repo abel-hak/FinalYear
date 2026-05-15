@@ -50,6 +50,43 @@ class LearningPathService:
             level=checkpoint.level,
         )
 
+    @staticmethod
+    def _is_unlocked_for_completed_ids(path, completed_ids: set, prev_path) -> bool:
+        checkpoint_ok = bool(
+            getattr(path, "checkpoint_quest_id", None)
+            and path.checkpoint_quest_id in completed_ids
+        )
+        if prev_path:
+            prev_quest_ids = {pq.quest_id for pq in prev_path.path_quests}
+            prev_ok = prev_quest_ids.issubset(completed_ids) if prev_quest_ids else True
+        else:
+            prev_ok = True
+        return checkpoint_ok or prev_ok
+
+    async def _has_higher_checkpoint_unlock(
+        self, path, all_paths, language: str, level: int, completed_ids: set
+    ) -> bool:
+        """Check if any higher-level path in same language is checkpoint-unlocked.
+        
+        Implements cascading unlock: if a higher-level path is unlocked via checkpoint,
+        all prerequisite paths become accessible.
+        """
+        for candidate in all_paths:
+            candidate_level = getattr(candidate, "level", 1)
+            if self._path_language(candidate) != language:
+                continue
+            if candidate_level <= level:
+                continue
+            if not getattr(candidate, "checkpoint_quest_id", None):
+                continue
+            prev_for_candidate = await self.path_repo.get_first_path_for_language_level(
+                self._path_language(candidate),
+                candidate_level - 1,
+            )
+            if self._is_unlocked_for_completed_ids(candidate, completed_ids, prev_for_candidate):
+                return True
+        return False
+
     async def list_paths(self, *, current_user) -> list[LearningPathSummary]:
         paths = await self.path_repo.list_paths_with_quests()
 
@@ -83,7 +120,13 @@ class LearningPathService:
                 else:
                     prev_ok = True
 
-                unlocked = checkpoint_ok or prev_ok
+                # Apply cascading unlock: if a higher-level path is checkpoint-unlocked,
+                # all prerequisite paths become accessible.
+                higher_unlocked = await self._has_higher_checkpoint_unlock(
+                    p, paths, language, level, completed_ids
+                )
+
+                unlocked = checkpoint_ok or prev_ok or higher_unlocked
 
             path_quest_ids = self._quest_ids_for_path(p)
             completed_in_path = len(path_quest_ids.intersection(completed_ids)) if path_quest_ids else 0
@@ -116,6 +159,7 @@ class LearningPathService:
 
         learner = await self.learner_repo.get_or_create_active_by_user_id(user_id)
         completed_ids = await self.path_repo.get_completed_quest_ids_for_learner(learner.id)
+        all_paths = await self.path_repo.list_paths_with_quests()
 
         language = self._path_language(path)
         level = getattr(path, "level", 1)
@@ -131,17 +175,30 @@ class LearningPathService:
                     prev_quest_ids = self._quest_ids_for_path(prev_path)
                     if prev_quest_ids and not prev_quest_ids.issubset(completed_ids):
                         is_unlocked = False
-                        # Build unlock hint; also mention checkpoint option if available
+                        # Build unlock hint with all available options
+                        options = []
+                        options.append(f"complete all quests in the Level {level - 1} {language.capitalize()} path")
+                        
                         if getattr(path, "checkpoint_quest_id", None) and path.checkpoint_quest:
-                            unlock_hint = (
-                                f"Solve the checkpoint quest '{path.checkpoint_quest.title}' "
-                                f"or complete all quests in the Level {level - 1} {language.capitalize()} path to unlock this one."
-                            )
-                        else:
-                            unlock_hint = (
-                                f"Complete all quests in the Level {level - 1} "
-                                f"{language.capitalize()} path to unlock this one."
-                            )
+                            options.append(f"solve the checkpoint quest '{path.checkpoint_quest.title}'")
+                        
+                        hint_text = " or ".join(options)
+                        unlock_hint = f"Unlock this path by: {hint_text}."
+
+        # Cascading unlock rule:
+        # if any higher-level path in the same language is checkpoint-unlocked,
+        # all quests in this prerequisite path become accessible.
+        full_access_prereq = await self._has_higher_checkpoint_unlock(
+            path, all_paths, language, level, completed_ids
+        )
+        
+        # If cascading unlock is available, the path is unlocked
+        if full_access_prereq:
+            is_unlocked = True
+        
+        # If cascading unlock is available and path was locked, add it to the hint
+        if full_access_prereq and unlock_hint:
+            unlock_hint = unlock_hint.rstrip(".") + " or complete a higher-level checkpoint path."
 
         quest_items: list[LearningPathQuestItem] = []
         previous_completed = True
@@ -152,6 +209,8 @@ class LearningPathService:
                 continue
             if q.id in completed_ids:
                 status_val = "completed"
+            elif full_access_prereq:
+                status_val = "current"
             elif previous_completed and not current_assigned:
                 status_val = "current"
                 current_assigned = True

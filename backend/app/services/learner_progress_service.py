@@ -68,16 +68,100 @@ class LearnerProgressService:
                     previous_completed = False
         return statuses
 
+    @staticmethod
+    def _path_language(path) -> str:
+        return (getattr(path, "language", None) or "python").lower()
+
+    @staticmethod
+    def _ordered_active_path_quest_ids(path) -> list:
+        ordered_ids: list = []
+        for pq in sorted(path.path_quests, key=lambda x: x.order_rank):
+            q = pq.quest
+            if not q or q.is_deleted:
+                continue
+            ordered_ids.append(q.id)
+        return ordered_ids
+
+    def _apply_checkpoint_unlock_overlays(self, *, paths: list, completed_ids: set, statuses: dict) -> tuple[dict, dict]:
+        """Apply checkpoint-driven cascading accessibility on top of global statuses.
+
+        Rules:
+        - If a path is unlocked via checkpoint completion, its prerequisite lower
+          level paths (same language) become fully accessible.
+        - The checkpoint-unlocked path itself remains sequential.
+        """
+        updated = dict(statuses)
+        path_ids_by_quest: dict = {}
+
+        if not paths:
+            return updated, path_ids_by_quest
+
+        checkpoint_unlocked_targets = [
+            p
+            for p in paths
+            if getattr(p, "checkpoint_quest_id", None)
+            and p.checkpoint_quest_id in completed_ids
+            and getattr(p, "level", 1) > 1
+        ]
+
+        # Unlock every quest in prerequisite paths when a higher path is
+        # unlocked via checkpoint.
+        for target in checkpoint_unlocked_targets:
+            target_lang = self._path_language(target)
+            target_level = getattr(target, "level", 1)
+            for p in paths:
+                if self._path_language(p) != target_lang:
+                    continue
+                if getattr(p, "level", 1) >= target_level:
+                    continue
+                ordered = self._ordered_active_path_quest_ids(p)
+                for qid in ordered:
+                    path_ids_by_quest[qid] = ordered
+                    if qid in completed_ids:
+                        updated[qid] = "completed"
+                    else:
+                        updated[qid] = "current"
+
+        # Keep the newly checkpoint-unlocked path in sequential mode.
+        for target in checkpoint_unlocked_targets:
+            ordered = self._ordered_active_path_quest_ids(target)
+            previous_completed = True
+            current_assigned = False
+            for qid in ordered:
+                path_ids_by_quest[qid] = ordered
+                if qid in completed_ids:
+                    updated[qid] = "completed"
+                elif previous_completed and not current_assigned:
+                    updated[qid] = "current"
+                    current_assigned = True
+                    previous_completed = False
+                else:
+                    updated[qid] = "locked"
+                    previous_completed = False
+
+        return updated, path_ids_by_quest
+
     async def _load_progress_state(self, user_id):
         learner = await self.learner_repo.get_or_create_active_by_user_id(user_id)
         quests = await self.progress_repo.list_active_quests_ordered()
         ordered_ids = [q.id for q in quests]
         completed_ids = await self.progress_repo.get_completed_quest_ids_for_learner(learner.id)
         statuses = self._build_statuses_per_language(quests, completed_ids)
-        return learner, quests, ordered_ids, completed_ids, statuses
+        paths = await self.path_repo.list_paths_with_quests()
+        statuses, path_ids_by_quest = self._apply_checkpoint_unlock_overlays(
+            paths=paths,
+            completed_ids=completed_ids,
+            statuses=statuses,
+        )
+        checkpoint_quest_ids = {
+            path.checkpoint_quest_id
+            for path in paths
+            if getattr(path, "checkpoint_quest_id", None)
+        }
+        return learner, quests, ordered_ids, completed_ids, statuses, checkpoint_quest_ids, path_ids_by_quest
 
     async def list_quests_for_user(self, user_id) -> list[QuestSummary]:
-        _, quests, _, _, statuses = await self._load_progress_state(user_id)
+        _, quests, _, _, statuses, _, _ = await self._load_progress_state(user_id)
         return [
             QuestSummary(
                 id=q.id,
@@ -94,7 +178,7 @@ class LearnerProgressService:
         ]
 
     async def get_progress_summary(self, user_id) -> ProgressSummary:
-        learner, quests, _, _, statuses = await self._load_progress_state(user_id)
+        learner, quests, _, _, statuses, _, _ = await self._load_progress_state(user_id)
         summaries = [
             QuestSummary(
                 id=q.id,
@@ -119,13 +203,7 @@ class LearnerProgressService:
         )
 
     async def get_quest_detail_for_user(self, user_id, quest_id) -> QuestDetail:
-        learner, quests, _, _, statuses = await self._load_progress_state(user_id)
-        checkpoint_paths = await self.path_repo.list_paths_with_quests()
-        checkpoint_quest_ids = {
-            path.checkpoint_quest_id
-            for path in checkpoint_paths
-            if getattr(path, "checkpoint_quest_id", None)
-        }
+        learner, quests, _, _, statuses, checkpoint_quest_ids, path_ids_by_quest = await self._load_progress_state(user_id)
 
         quest = await self.progress_repo.get_active_quest_by_id(quest_id)
         if not quest:
@@ -140,22 +218,26 @@ class LearnerProgressService:
         # language so a learner on the last Python quest does not jump into a
         # Java quest (and vice versa).
         quest_lang = (getattr(quest, "language", None) or "python").lower()
-        same_lang_ids = [
-            q.id
-            for q in quests
-            if (getattr(q, "language", None) or "python").lower() == quest_lang
-        ]
+        path_order_ids = path_ids_by_quest.get(quest.id)
+        if path_order_ids:
+            candidate_ids = path_order_ids
+        else:
+            candidate_ids = [
+                q.id
+                for q in quests
+                if (getattr(q, "language", None) or "python").lower() == quest_lang
+            ]
 
         prev_id = None
         next_id = None
-        if quest.id in same_lang_ids:
-            idx = same_lang_ids.index(quest.id)
+        if quest.id in candidate_ids:
+            idx = candidate_ids.index(quest.id)
             if idx > 0:
-                candidate = same_lang_ids[idx - 1]
+                candidate = candidate_ids[idx - 1]
                 if statuses.get(candidate) != "locked":
                     prev_id = candidate
-            if idx < len(same_lang_ids) - 1:
-                candidate = same_lang_ids[idx + 1]
+            if idx < len(candidate_ids) - 1:
+                candidate = candidate_ids[idx + 1]
                 if statuses.get(candidate) != "locked":
                     next_id = candidate
 
