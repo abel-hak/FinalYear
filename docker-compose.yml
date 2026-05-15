@@ -1,4 +1,5 @@
 services:
+  # Database - starts first
   postgres:
     image: postgres:16-alpine
     container_name: codequest-postgres
@@ -16,6 +17,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
 
   postgres_test:
     image: postgres:16-alpine
@@ -34,6 +36,50 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+
+  # Backend Server - starts after database is healthy
+  server:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: codequest-server
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://codequest:codequest@postgres:5432/codequest
+      DATABASE_HOST: postgres
+      APP_ENV: production
+      DEBUG: "false"
+      API_PREFIX: /api/v1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Removed Docker healthcheck to avoid continuous polling by Docker daemon.
+    # Server readiness is still used by the client via an explicit startup probe
+    # implemented inside the client image (wait-for-server.sh).
+
+  # Frontend Client - starts after server is healthy
+  client:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8000
+    container_name: codequest-client
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - server
+    # Client exposes its own healthcheck but at a low frequency to avoid load
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:5173/"]
+      interval: 1m
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 volumes:
   postgres_data:
