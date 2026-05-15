@@ -9,7 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.learner_repository import LearnerRepository
 from app.repositories.learning_path_repository import LearningPathRepository
-from app.schemas.learning_path import LearningPathDetail, LearningPathQuestItem, LearningPathSummary
+from app.schemas.learning_path import (
+    CheckpointQuestInfo,
+    LearningPathDetail,
+    LearningPathQuestItem,
+    LearningPathSummary,
+)
 
 
 @dataclass
@@ -31,6 +36,19 @@ class LearningPathService:
     @staticmethod
     def _path_language(path) -> str:
         return (getattr(path, "language", None) or "python").lower()
+
+    @staticmethod
+    def _checkpoint_info(path) -> CheckpointQuestInfo | None:
+        checkpoint = getattr(path, "checkpoint_quest", None)
+        if not checkpoint:
+            return None
+
+        return CheckpointQuestInfo(
+            id=str(checkpoint.id),
+            title=checkpoint.title,
+            description=checkpoint.description,
+            level=checkpoint.level,
+        )
 
     async def list_paths(self, *, current_user) -> list[LearningPathSummary]:
         paths = await self.path_repo.list_paths_with_quests()
@@ -81,6 +99,7 @@ class LearningPathService:
                     quest_count=len(p.path_quests),
                     completed_count=completed_in_path,
                     unlocked=unlocked,
+                    checkpoint_quest_info=self._checkpoint_info(p),
                 )
             )
         return summaries
@@ -163,14 +182,5 @@ class LearningPathService:
             quests=quest_items,
             is_unlocked=is_unlocked,
             unlock_hint=unlock_hint,
-            checkpoint_quest_info=(
-                {
-                    "id": str(path.checkpoint_quest.id),
-                    "title": path.checkpoint_quest.title,
-                    "description": path.checkpoint_quest.description,
-                    "level": path.checkpoint_quest.level,
-                }
-                if getattr(path, "checkpoint_quest", None)
-                else None
-            ),
+            checkpoint_quest_info=self._checkpoint_info(path),
         )

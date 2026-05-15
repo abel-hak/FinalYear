@@ -69,13 +69,21 @@ class CurriculumGenerator:
             if candidate in existing_keys:
                 continue
 
-            self.session.add(TestCase(
+            tc_obj = TestCase(
                 id=uuid.uuid4(),
                 quest_id=quest.id,
                 input_data=tc.get("input_data"),
                 expected_output=tc.get("expected_output", "OK\n"),
                 is_hidden=tc.get("is_hidden", False),
-            ))
+            )
+            # Persist the test case as its own DB object and link to the quest
+            self.session.add(tc_obj)
+            try:
+                # if the quest relationship collection is available, attach for clarity
+                quest.test_cases.append(tc_obj)
+            except Exception:
+                # If relationship isn't configured yet, ignore — FK is set on tc_obj
+                pass
             existing_keys.add(candidate)
 
     def _create_quest(

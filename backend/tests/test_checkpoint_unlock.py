@@ -55,6 +55,14 @@ async def test_checkpoint_unlocks_path(client: AsyncClient) -> None:
     token = await _login_learner(client)
     learner_headers = {"Authorization": f"Bearer {token}"}
 
+    list_resp = await client.get("/api/v1/learning-paths", headers=learner_headers)
+    assert list_resp.status_code == 200, list_resp.text
+    listed_paths = list_resp.json()
+    created_path = next((item for item in listed_paths if item["id"] == path_id), None)
+    assert created_path is not None, "Created path should appear in the list response"
+    assert created_path["unlocked"] is False
+    assert created_path.get("checkpoint_quest_info"), "Expected checkpoint_quest_info in list response"
+
     detail = await client.get(f"/api/v1/learning-paths/{path_id}", headers=learner_headers)
     assert detail.status_code == 200, detail.text
     body = detail.json()
@@ -72,6 +80,49 @@ async def test_checkpoint_unlocks_path(client: AsyncClient) -> None:
     assert sub["passed"] is True
 
     # After passing, the path should be unlocked for learner
+    list_after = await client.get("/api/v1/learning-paths", headers=learner_headers)
+    assert list_after.status_code == 200, list_after.text
+    updated_path = next((item for item in list_after.json() if item["id"] == path_id), None)
+    assert updated_path is not None
+    assert updated_path["unlocked"] is True
+
     detail_after = await client.get(f"/api/v1/learning-paths/{path_id}", headers=learner_headers)
     assert detail_after.status_code == 200, detail_after.text
     assert detail_after.json()["is_unlocked"] is True
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_quest_detail_is_viewable_when_marked_as_checkpoint(client: AsyncClient) -> None:
+    admin_token = await _admin_token(client)
+    headers = {"Authorization": f"Bearer {admin_token}"}
+
+    quests_resp = await client.get("/api/v1/admin/quests", headers=headers)
+    assert quests_resp.status_code == 200, quests_resp.text
+    quests = quests_resp.json()
+
+    checkpoint_quest = next((quest for quest in quests if int(quest["level"]) >= 2), None)
+    assert checkpoint_quest is not None, "Expected an intermediate or advanced quest"
+
+    create_path_resp = await client.post(
+        "/api/v1/admin/learning-paths",
+        json={
+            "title": "Checkpoint View Test Path",
+            "description": "Path with a checkpoint quest that should be viewable",
+            "level": 3,
+            "order_rank": 1000,
+            "checkpoint_quest_id": checkpoint_quest["id"],
+        },
+        headers=headers,
+    )
+    assert create_path_resp.status_code == 201, create_path_resp.text
+
+    token = await _login_learner(client)
+    learner_headers = {"Authorization": f"Bearer {token}"}
+
+    detail = await client.get(
+        f"/api/v1/quests/{checkpoint_quest['id']}",
+        headers=learner_headers,
+    )
+    assert detail.status_code == 200, detail.text
+    body = detail.json()
+    assert body["id"] == checkpoint_quest["id"]

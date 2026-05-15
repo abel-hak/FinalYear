@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.learner_repository import LearnerRepository
+from app.repositories.learning_path_repository import LearningPathRepository
 from app.repositories.progress_repository import ProgressRepository
 from app.schemas.progress import ProgressSummary, ReviewSuggestion
 from app.schemas.quest import QuestDetail, QuestSummary
@@ -30,6 +31,7 @@ class LearnerProgressService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.learner_repo = LearnerRepository(db)
+        self.path_repo = LearningPathRepository(db)
         self.progress_repo = ProgressRepository(db)
         self.points_service = PointsService(db)
 
@@ -116,12 +118,18 @@ class LearnerProgressService:
 
     async def get_quest_detail_for_user(self, user_id, quest_id) -> QuestDetail:
         learner, quests, _, _, statuses = await self._load_progress_state(user_id)
+        checkpoint_paths = await self.path_repo.list_paths_with_quests()
+        checkpoint_quest_ids = {
+            path.checkpoint_quest_id
+            for path in checkpoint_paths
+            if getattr(path, "checkpoint_quest_id", None)
+        }
 
         quest = await self.progress_repo.get_active_quest_by_id(quest_id)
         if not quest:
             raise QuestNotFoundError("Quest not found")
 
-        if statuses.get(quest.id) == "locked":
+        if statuses.get(quest.id) == "locked" and quest.id not in checkpoint_quest_ids:
             raise QuestLockedError("Quest is locked. Complete the current quest to unlock it.")
 
         completed = await self.progress_repo.has_passed_submission(learner.id, quest.id)

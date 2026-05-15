@@ -47,13 +47,17 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    env_file:
+      - ./backend/.env
     environment:
-      DATABASE_URL: postgresql+asyncpg://codequest:codequest@postgres:5432/codequest
-      DATABASE_URL_SYNC: postgresql+psycopg://codequest:codequest@postgres:5432/codequest
-      DATABASE_HOST: postgres
+      # Database values are loaded from backend/.env via `env_file`
       APP_ENV: production
       DEBUG: "false"
       API_PREFIX: /api/v1
+      # Enable local subprocess sandbox inside the server for code execution
+      # in environments without a configured Judge0 service. Only supports
+      # Python and intended for development/testing — not production-grade.
+      USE_LOCAL_SANDBOX: "true"
     depends_on:
       postgres:
         condition: service_healthy

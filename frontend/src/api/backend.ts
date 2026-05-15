@@ -35,6 +35,14 @@ export interface LearningPathSummaryDto {
   quest_count: number;
   completed_count?: number;
   unlocked?: boolean;
+  checkpoint_quest_info?: CheckpointQuestInfoDto | null;
+}
+
+export interface CheckpointQuestInfoDto {
+  id: string;
+  title: string;
+  description: string;
+  level: number;
 }
 
 export interface LearningPathQuestItemDto {
@@ -57,12 +65,7 @@ export interface LearningPathDetailDto {
   quests: LearningPathQuestItemDto[];
   is_unlocked?: boolean;
   unlock_hint?: string | null;
-  checkpoint_quest_info?: {
-    id: string;
-    title: string;
-    description: string;
-    level: number;
-  } | null;
+  checkpoint_quest_info?: CheckpointQuestInfoDto | null;
 }
 
 export interface ReviewSuggestionDto {

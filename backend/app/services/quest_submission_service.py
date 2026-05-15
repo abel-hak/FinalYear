@@ -60,7 +60,9 @@ class QuestSubmissionService:
 
         test_cases = await self.quest_repo.list_active_test_cases(quest.id)
         if not test_cases:
-            raise SubmissionSystemBusyError("System Busy. Please try again later.")
+            # This should not happen in normal operation - all quests must have test cases.
+            # If it does, it indicates a data integrity issue (quest misconfigured).
+            raise SubmissionQuestNotFoundError("Quest is not properly configured with test cases")
 
         learner = await self.learner_repo.get_or_create_active_by_user_id(user_id)
 

@@ -130,81 +130,95 @@ const LearningPaths: React.FC = () => {
               const label = levelLabels[path.level] ?? `Level ${path.level}`;
               const progress = (path as any).completed_count ?? 0;
               const total = path.quest_count ?? 0;
+              const checkpointQuest = path.checkpoint_quest_info;
 
-              return (
-                <Link
-                  key={path.id}
-                  to={unlocked ? `/learning-paths/${path.id}` : '#'}
-                  className={!unlocked ? 'cursor-not-allowed' : ''}
-                  onClick={!unlocked ? (e) => e.preventDefault() : undefined}
+              const card = (
+                <div
+                  className={`group relative rounded-2xl border overflow-hidden transition-all duration-300 ${
+                    unlocked
+                      ? 'bg-card border-border hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5'
+                      : 'bg-card/50 border-border/50 opacity-60'
+                  }`}
                 >
-                  <div
-                    className={`group relative rounded-2xl border overflow-hidden transition-all duration-300 ${
-                      unlocked
-                        ? 'bg-card border-border hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5'
-                        : 'bg-card/50 border-border/50 opacity-60'
-                    }`}
-                  >
-                    {/* Gradient header bar */}
-                    <div className={`h-1.5 bg-gradient-to-r ${gradient} ${!unlocked ? 'opacity-40' : ''}`} />
+                  {/* Gradient header bar */}
+                  <div className={`h-1.5 bg-gradient-to-r ${gradient} ${!unlocked ? 'opacity-40' : ''}`} />
 
-                    <div className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-4">
-                          {/* Icon */}
-                          <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg ${!unlocked ? 'opacity-50' : ''}`}>
-                            {unlocked ? icon : <Lock className="w-6 h-6 text-white/70" />}
-                          </div>
-
-                          <div>
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full bg-gradient-to-r ${gradient} text-white`}>
-                                {label}
-                              </span>
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                                {LANGUAGE_LABELS[(path.language ?? 'python').toLowerCase()] ?? path.language}
-                              </span>
-                              {!unlocked && (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/20">
-                                  Locked
-                                </span>
-                              )}
-                            </div>
-                            <h2 className={`text-lg font-bold transition-colors ${unlocked ? 'text-foreground group-hover:text-primary' : 'text-muted-foreground'}`}>
-                              {path.title}
-                            </h2>
-                          </div>
+                  <div className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        {/* Icon */}
+                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg ${!unlocked ? 'opacity-50' : ''}`}>
+                          {unlocked ? icon : <Lock className="w-6 h-6 text-white/70" />}
                         </div>
 
-                        {unlocked && (
-                          <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all mt-1 shrink-0" />
-                        )}
+                        <div>
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full bg-gradient-to-r ${gradient} text-white`}>
+                              {label}
+                            </span>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                              {LANGUAGE_LABELS[(path.language ?? 'python').toLowerCase()] ?? path.language}
+                            </span>
+                            {!unlocked && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/20">
+                                Locked
+                              </span>
+                            )}
+                          </div>
+                          <h2 className={`text-lg font-bold transition-colors ${unlocked ? 'text-foreground group-hover:text-primary' : 'text-muted-foreground'}`}>
+                            {path.title}
+                          </h2>
+                        </div>
                       </div>
 
-                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                        {path.description}
-                      </p>
+                      {unlocked && (
+                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all mt-1 shrink-0" />
+                      )}
+                    </div>
 
-                      <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
-                        <span>{path.quest_count} quests</span>
-                        {unlocked && total > 0 && (
-                          <span className="text-xs">{progress}/{total} completed</span>
-                        )}
-                      </div>
+                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                      {path.description}
+                    </p>
 
-                      {unlocked && total > 0 ? (
-                        <ProgressBar value={progress} max={total} size="sm" variant="success" />
-                      ) : !unlocked ? (
+                    <div className="flex items-center justify-between text-sm text-muted-foreground mb-2 gap-3">
+                      <span>{path.quest_count} quests</span>
+                      {unlocked && total > 0 && (
+                        <span className="text-xs">{progress}/{total} completed</span>
+                      )}
+                    </div>
+
+                    {unlocked && total > 0 ? (
+                      <ProgressBar value={progress} max={total} size="sm" variant="success" />
+                    ) : !unlocked ? (
+                      <div className="space-y-3">
                         <p className="text-xs text-amber-500 font-medium">
                           Complete Level {path.level - 1} of{' '}
                           {LANGUAGE_LABELS[(path.language ?? 'python').toLowerCase()] ??
                             path.language}{' '}
                           to unlock
                         </p>
-                      ) : null}
-                    </div>
+
+                        {checkpointQuest ? (
+                          <Link to={`/quest/${checkpointQuest.id}`} className="inline-flex">
+                            <Button variant="outline" size="sm" className="h-8 px-3 text-xs">
+                              Solve checkpoint
+                            </Button>
+                          </Link>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
+                </div>
+              );
+
+              return unlocked ? (
+                <Link key={path.id} to={`/learning-paths/${path.id}`}>
+                  {card}
                 </Link>
+              ) : (
+                <div key={path.id} className="cursor-default">
+                  {card}
+                </div>
               );
             })}
           </div>

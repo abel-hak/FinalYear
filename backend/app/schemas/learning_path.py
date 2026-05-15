@@ -4,6 +4,15 @@ Pydantic schemas for learning paths.
 from pydantic import BaseModel
 
 
+class CheckpointQuestInfo(BaseModel):
+    """Minimal checkpoint quest metadata exposed to learners."""
+
+    id: str
+    title: str
+    description: str
+    level: int
+
+
 class LearningPathQuestItem(BaseModel):
     """Quest within a path with learner status."""
     id: str
@@ -26,6 +35,7 @@ class LearningPathSummary(BaseModel):
     quest_count: int
     completed_count: int = 0
     unlocked: bool = True  # Level 1 of each language is always unlocked; Level N when Level N-1 in the same language is complete
+    checkpoint_quest_info: CheckpointQuestInfo | None = None
 
 
 class LearningPathDetail(BaseModel):
@@ -41,4 +51,4 @@ class LearningPathDetail(BaseModel):
     unlock_hint: str | None = None  # e.g. "Complete Level 1 to unlock"
 
     # Optional checkpoint quest info exposed to learners when a path is locked
-    checkpoint_quest_info: dict | None = None
+    checkpoint_quest_info: CheckpointQuestInfo | None = None

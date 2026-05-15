@@ -4,6 +4,7 @@ import Header from '@/components/Header';
 import { Check, Lock, ChevronRight, BookOpen, ExternalLink } from 'lucide-react';
 import { fetchLearningPathDetail, type LearningPathDetailDto, type LearningPathQuestItemDto } from '@/api/backend';
 import { getAggregatedResources, getBestUrlForConcept } from '@/lib/conceptResources';
+import { Button } from '@/components/ui/button';
 
 const LearningPathDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -74,8 +75,10 @@ const LearningPathDetail: React.FC = () => {
                       <p className="text-sm text-muted-foreground mt-1">{path.checkpoint_quest_info.description}</p>
                     </div>
                     <div className="flex-shrink-0">
-                      <Link to={`/quests/${path.checkpoint_quest_info.id}`} className="inline-block">
-                        <button className="inline-flex items-center px-3 py-1 rounded bg-primary text-white">Solve to unlock</button>
+                      <Link to={`/quest/${path.checkpoint_quest_info.id}`} className="inline-block">
+                        <Button size="sm" className="h-8 px-3 text-xs">
+                          Solve to unlock
+                        </Button>
                       </Link>
                     </div>
                   </div>
