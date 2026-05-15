@@ -34,9 +34,8 @@ done\n\
 echo "Database is ready!"\n\
 echo "Running migrations..."\n\
 alembic upgrade head || true\n\
-echo "Seeding mock data (if absent)..."\n\
-# Run seed script using sync DB URL; ignore failure if already seeded or missing env\n\
-python -m scripts.seed || true\n\
+echo "Running idempotent seed on startup..."\n\
+python -m scripts.seed\n\
 echo "Starting server..."\n\
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000\n\
 ' > /app/start.sh && chmod +x /app/start.sh

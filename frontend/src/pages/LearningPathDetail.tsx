@@ -65,6 +65,22 @@ const LearningPathDetail: React.FC = () => {
                   <strong>Locked:</strong> {path.unlock_hint}
                 </div>
               )}
+              {isLocked && path.checkpoint_quest_info && (
+                <div className="mb-4 p-4 rounded-lg border border-border bg-card">
+                  <h3 className="font-semibold mb-2">Unlock with a checkpoint quest</h3>
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1">
+                      <div className="text-lg font-medium">{path.checkpoint_quest_info.title}</div>
+                      <p className="text-sm text-muted-foreground mt-1">{path.checkpoint_quest_info.description}</p>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <Link to={`/quests/${path.checkpoint_quest_info.id}`} className="inline-block">
+                        <button className="inline-flex items-center px-3 py-1 rounded bg-primary text-white">Solve to unlock</button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                   <BookOpen className="w-6 h-6 text-primary" />

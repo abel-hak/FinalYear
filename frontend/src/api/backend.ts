@@ -57,6 +57,12 @@ export interface LearningPathDetailDto {
   quests: LearningPathQuestItemDto[];
   is_unlocked?: boolean;
   unlock_hint?: string | null;
+  checkpoint_quest_info?: {
+    id: string;
+    title: string;
+    description: string;
+    level: number;
+  } | null;
 }
 
 export interface ReviewSuggestionDto {
@@ -743,6 +749,7 @@ export interface AdminLearningPathDto {
   order_rank: number;
   language?: string;
   quest_count: number;
+  checkpoint_quest_id?: string | null;
 }
 
 export interface AdminPathQuestDto {
@@ -763,6 +770,7 @@ export async function createAdminLearningPath(payload: {
   level: number;
   order_rank: number;
   language?: string;
+  checkpoint_quest_id?: string | null;
 }): Promise<AdminLearningPathDto> {
   const token = getToken();
   if (!token) throw new Error("Not authenticated");
@@ -783,7 +791,7 @@ export async function createAdminLearningPath(payload: {
 
 export async function updateAdminLearningPath(
   pathId: string,
-  payload: Partial<{ title: string; description: string; level: number; order_rank: number; language: string }>
+  payload: Partial<{ title: string; description: string; level: number; order_rank: number; language: string; checkpoint_quest_id?: string | null }>
 ): Promise<AdminLearningPathDto> {
   const token = getToken();
   if (!token) throw new Error("Not authenticated");

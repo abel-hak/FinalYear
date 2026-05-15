@@ -49,6 +49,7 @@ services:
       - "8000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://codequest:codequest@postgres:5432/codequest
+      DATABASE_URL_SYNC: postgresql+psycopg://codequest:codequest@postgres:5432/codequest
       DATABASE_HOST: postgres
       APP_ENV: production
       DEBUG: "false"

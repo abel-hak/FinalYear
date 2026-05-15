@@ -133,6 +133,7 @@ export const PathManagement = () => {
     level: number;
     order_rank: number;
     language: string;
+    checkpoint_quest_id?: string | null;
   }) => {
     try {
       if (editingPath) {
@@ -414,6 +415,8 @@ const PathEditorDialog = ({
   const [level, setLevel] = useState(1);
   const [orderRank, setOrderRank] = useState(1);
   const [language, setLanguage] = useState<string>("python");
+  const [checkpointQuest, setCheckpointQuest] = useState<string | null>(null);
+  const [allQuests, setAllQuests] = useState<AdminQuestDto[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -423,6 +426,9 @@ const PathEditorDialog = ({
       setLevel(path?.level ?? 1);
       setOrderRank(path?.order_rank ?? nextOrderRank);
       setLanguage(path?.language ?? "python");
+      setCheckpointQuest(path?.checkpoint_quest_id ?? null);
+      // preload quests for checkpoint selector
+      fetchAdminQuests().then((q) => setAllQuests(q.filter((x) => !x.is_deleted))).catch(() => setAllQuests([]));
     }
   }, [open, path, nextOrderRank]);
 
@@ -430,7 +436,7 @@ const PathEditorDialog = ({
     e.preventDefault();
     setSaving(true);
     try {
-      await onSave({ title, description, level, order_rank: orderRank, language });
+      await onSave({ title, description, level, order_rank: orderRank, language, checkpoint_quest_id: checkpointQuest ?? null });
       onOpenChange(false);
     } finally {
       setSaving(false);
@@ -506,6 +512,25 @@ const PathEditorDialog = ({
             <p className="text-xs text-muted-foreground mt-1">
               Quests in a path should match this language. Progression is independent per language.
             </p>
+          </div>
+          <div>
+            <label className="text-sm font-medium">Checkpoint quest (optional)</label>
+            <Select value={checkpointQuest ?? ""} onValueChange={(v) => setCheckpointQuest(v || null)}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">None</SelectItem>
+                {allQuests
+                  .filter((q) => !q.is_deleted)
+                  .map((q) => (
+                    <SelectItem key={q.id} value={q.id}>
+                      {q.title} (Level {q.level})
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">Optional quest that, when solved, unlocks this path.</p>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

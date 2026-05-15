@@ -123,7 +123,10 @@ class AdminRepository:
     async def list_learning_paths_with_quests(self) -> list[LearningPath]:
         result = await self.db.execute(
             select(LearningPath)
-            .options(selectinload(LearningPath.path_quests))
+            .options(
+                selectinload(LearningPath.path_quests),
+                selectinload(LearningPath.checkpoint_quest),
+            )
             .order_by(LearningPath.level, LearningPath.order_rank)
         )
         return list(result.scalars().all())
@@ -145,7 +148,10 @@ class AdminRepository:
     async def get_learning_path_with_quests(self, path_id) -> LearningPath | None:
         result = await self.db.execute(
             select(LearningPath)
-            .options(selectinload(LearningPath.path_quests))
+            .options(
+                selectinload(LearningPath.path_quests).selectinload(LearningPathQuest.quest),
+                selectinload(LearningPath.checkpoint_quest),
+            )
             .where(LearningPath.id == path_id)
         )
         return result.scalar_one_or_none()
