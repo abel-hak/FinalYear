@@ -17,6 +17,9 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
+import ForgotPasswordVerify from "./pages/ForgotPasswordVerify";
+import ForgotPasswordConfirm from "./pages/ForgotPasswordConfirm";
 import { getToken } from "./api/backend";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
@@ -43,6 +46,9 @@ const App = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/forgot-password/verify" element={<ForgotPasswordVerify />} />
+          <Route path="/forgot-password/reset" element={<ForgotPasswordConfirm />} />
           <Route
             path="/quests"
             element={token ? <Quests /> : <Navigate to="/login" replace />}

@@ -118,6 +118,10 @@ const Login = () => {
           <Link to="/register" className="text-primary hover:text-primary/80 font-medium transition-colors">
             Create one
           </Link>
+          <span className="mx-2 text-muted-foreground/60">|</span>
+          <Link to="/forgot-password" className="text-primary hover:text-primary/80 font-medium transition-colors">
+            Forgot password?
+          </Link>
         </p>
       </main>
     </div>
