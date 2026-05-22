@@ -124,16 +124,74 @@ const Quests: React.FC = () => {
 
   const filteredQuests = React.useMemo(() => {
     let result = quests;
-    if (languageFilter !== "all") result = result.filter((q) => q.language === languageFilter);
-    if (filter !== "all") result = result.filter((q) => q.difficulty === filter);
+    if (languageFilter !== "all")
+      result = result.filter((q) => q.language === languageFilter);
+    if (filter !== "all")
+      result = result.filter((q) => q.difficulty === filter);
     // If one or more tags selected, show quests that have any of the selected tags
     if (tagFilter.length > 0)
-      result = result.filter((q) => (q.tags ?? []).some((t) => tagFilter.includes(t)));
+      result = result.filter((q) =>
+        (q.tags ?? []).some((t) => tagFilter.includes(t)),
+      );
     return result;
   }, [quests, filter, tagFilter, languageFilter]);
 
   return (
     <div className="flex flex-col items-center min-h-screen bg-background">
+      <style>{`
+        @keyframes filtersButtonShine {
+          0% {
+            transform: translateX(-220%) skewX(-22deg);
+            opacity: 0;
+          }
+          14% {
+            opacity: 0.05;
+          }
+          26% {
+            opacity: 0.95;
+          }
+          40% {
+            opacity: 0.18;
+          }
+          55% {
+            opacity: 0;
+          }
+          100% {
+            transform: translateX(300%) skewX(-22deg);
+            opacity: 0;
+          }
+        }
+
+        .filters-shine {
+          position: absolute;
+          top: -70%;
+          bottom: -70%;
+          left: -55%;
+          width: 62%;
+          pointer-events: none;
+          background: linear-gradient(
+            115deg,
+            transparent 0%,
+            hsl(var(--foreground) / 0) 28%,
+            hsl(var(--primary) / 0.22) 42%,
+            hsl(var(--foreground) / 0.95) 50%,
+            hsl(var(--primary) / 0.22) 58%,
+            hsl(var(--foreground) / 0) 72%,
+            transparent 100%
+          );
+          filter: blur(1px);
+          box-shadow: 0 0 24px hsl(var(--primary) / 0.35);
+          mix-blend-mode: screen;
+          animation: filtersButtonShine 2.2s ease-out infinite;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .filters-shine {
+            animation: none;
+            opacity: 0;
+          }
+        }
+      `}</style>
       <Header />
 
       <main className="container py-8">
@@ -222,15 +280,18 @@ const Quests: React.FC = () => {
               <DialogTrigger asChild>
                 <Button
                   variant="outline"
-                  className="w-full gap-2 border-primary/30 bg-background/60 md:w-auto"
+                  className="relative isolate w-full gap-2 overflow-hidden border-primary/30 bg-background/60 md:w-auto"
                 >
-                  <Filter className="h-4 w-4" />
-                  Open filters
+                  <span aria-hidden className="filters-shine" />
+                  <Filter className="relative z-10 h-4 w-4" />
+                  <span className="relative z-10">Open filters</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl border-border bg-background/95 backdrop-blur-xl sm:rounded-2xl">
                 <DialogHeader className="text-left">
-                  <DialogTitle className="text-foreground">Filter quests</DialogTitle>
+                  <DialogTitle className="text-foreground">
+                    Filter quests
+                  </DialogTitle>
                   <DialogDescription>
                     Choose difficulty and concept filters to narrow down the
                     quest list.
@@ -242,8 +303,12 @@ const Quests: React.FC = () => {
                     <div className="rounded-xl border border-border bg-card/70 p-4">
                       <div className="mb-3 flex items-center justify-between gap-3">
                         <div>
-                          <h3 className="text-sm font-semibold text-foreground">Language</h3>
-                          <p className="text-xs text-muted-foreground">Pick a programming language to focus on.</p>
+                          <h3 className="text-sm font-semibold text-foreground">
+                            Language
+                          </h3>
+                          <p className="text-xs text-muted-foreground">
+                            Pick a programming language to focus on.
+                          </p>
                         </div>
                         {languageFilter !== "all" && (
                           <Button
@@ -260,7 +325,9 @@ const Quests: React.FC = () => {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Button
-                          variant={languageFilter === "all" ? "default" : "outline"}
+                          variant={
+                            languageFilter === "all" ? "default" : "outline"
+                          }
                           size="sm"
                           onClick={() => setLanguageFilter("all")}
                         >
@@ -269,7 +336,9 @@ const Quests: React.FC = () => {
                         {allLanguages.map((lang) => (
                           <Button
                             key={lang}
-                            variant={languageFilter === lang ? "default" : "outline"}
+                            variant={
+                              languageFilter === lang ? "default" : "outline"
+                            }
                             size="sm"
                             onClick={() => setLanguageFilter(lang)}
                           >
@@ -282,8 +351,12 @@ const Quests: React.FC = () => {
                     <div className="rounded-xl border border-border bg-card/70 p-4">
                       <div className="mb-3 flex items-center justify-between gap-3">
                         <div>
-                          <h3 className="text-sm font-semibold text-foreground">Difficulty</h3>
-                          <p className="text-xs text-muted-foreground">Select a difficulty level.</p>
+                          <h3 className="text-sm font-semibold text-foreground">
+                            Difficulty
+                          </h3>
+                          <p className="text-xs text-muted-foreground">
+                            Select a difficulty level.
+                          </p>
                         </div>
                         {filter !== "all" && (
                           <Button
@@ -299,22 +372,40 @@ const Quests: React.FC = () => {
                         )}
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {["all", "beginner", "intermediate", "advanced"].map((level) => (
-                          <Button key={level} variant={filter === level ? "default" : "outline"} size="sm" onClick={() => setFilter(level)} className="capitalize">
-                            {level}
-                          </Button>
-                        ))}
+                        {["all", "beginner", "intermediate", "advanced"].map(
+                          (level) => (
+                            <Button
+                              key={level}
+                              variant={filter === level ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setFilter(level)}
+                              className="capitalize"
+                            >
+                              {level}
+                            </Button>
+                          ),
+                        )}
                       </div>
                     </div>
 
                     <div className="rounded-xl border border-border bg-card/70 p-4">
                       <div className="mb-3 flex items-center justify-between gap-3">
                         <div>
-                          <h3 className="text-sm font-semibold text-foreground">Concepts</h3>
-                          <p className="text-xs text-muted-foreground">Filter quests by topic tags.</p>
+                          <h3 className="text-sm font-semibold text-foreground">
+                            Concepts
+                          </h3>
+                          <p className="text-xs text-muted-foreground">
+                            Filter quests by topic tags.
+                          </p>
                         </div>
                         {tagFilter.length > 0 && (
-                          <Button type="button" variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground" onClick={() => setTagFilter([])}>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-2 text-muted-foreground"
+                            onClick={() => setTagFilter([])}
+                          >
                             <X className="h-3.5 w-3.5" />
                             Clear
                           </Button>
@@ -323,22 +414,38 @@ const Quests: React.FC = () => {
 
                       {allTags.length > 0 ? (
                         <div className="flex max-h-56 flex-wrap gap-2 overflow-y-auto pr-1">
-                          <Button variant={tagFilter.length === 0 ? "default" : "outline"} size="sm" onClick={() => setTagFilter([])}>
+                          <Button
+                            variant={
+                              tagFilter.length === 0 ? "default" : "outline"
+                            }
+                            size="sm"
+                            onClick={() => setTagFilter([])}
+                          >
                             All
                           </Button>
                           {allTags.map((tag) => (
                             <Button
                               key={tag}
-                              variant={tagFilter.includes(tag) ? "default" : "outline"}
+                              variant={
+                                tagFilter.includes(tag) ? "default" : "outline"
+                              }
                               size="sm"
-                              onClick={() => setTagFilter((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))}
+                              onClick={() =>
+                                setTagFilter((prev) =>
+                                  prev.includes(tag)
+                                    ? prev.filter((t) => t !== tag)
+                                    : [...prev, tag],
+                                )
+                              }
                             >
                               {tag}
                             </Button>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">No concept tags available yet.</p>
+                        <p className="text-sm text-muted-foreground">
+                          No concept tags available yet.
+                        </p>
                       )}
                     </div>
                   </div>
@@ -355,7 +462,9 @@ const Quests: React.FC = () => {
                   >
                     Reset all filters
                   </Button>
-                  <Button onClick={() => setFiltersOpen(false)}>Apply filters</Button>
+                  <Button onClick={() => setFiltersOpen(false)}>
+                    Apply filters
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
