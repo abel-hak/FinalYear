@@ -1,5 +1,5 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Flame, Skull } from "lucide-react";
+import { Flame, CalendarX } from "lucide-react";
 
 interface WeeklyDayStatus {
   key: string;
@@ -307,7 +307,7 @@ export const WeeklyStreakSection: React.FC<WeeklyStreakSectionProps> = ({
                     <Flame className="absolute left-1/2 top-2 h-4 w-4 -translate-x-1/2 -translate-y-1/4 text-primary sm:h-10 sm:w-10" />
                   )}
                   {!day.active && day.isPast && (
-                    <Skull className="absolute left-1/2 top-2 h-4 w-4 -translate-x-1/2 -translate-y-1/4 text-muted-foreground/80 sm:h-8 sm:w-8 sm:translate-y-0.5" />
+                    <CalendarX className="absolute left-1/2 top-2 h-4 w-4 -translate-x-1/2 -translate-y-1/4 text-muted-foreground/80 sm:h-8 sm:w-8 sm:translate-y-0.5" />
                   )}
                   {!day.active && !day.isPast && (
                     <span className="text-sm font-bold text-foreground sm:text-base">

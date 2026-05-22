@@ -32,7 +32,8 @@ interface QuestWithLanguage extends Quest {
 
 const Quests: React.FC = () => {
   const [filter, setFilter] = React.useState<string>("all");
-  const [tagFilter, setTagFilter] = React.useState<string>("all");
+  // empty array = no tag filter (show all). Allows selecting multiple tags.
+  const [tagFilter, setTagFilter] = React.useState<string[]>([]);
   const [languageFilter, setLanguageFilter] = React.useState<string>("all");
   const [quests, setQuests] = React.useState<QuestWithLanguage[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -123,12 +124,11 @@ const Quests: React.FC = () => {
 
   const filteredQuests = React.useMemo(() => {
     let result = quests;
-    if (languageFilter !== "all")
-      result = result.filter((q) => q.language === languageFilter);
-    if (filter !== "all")
-      result = result.filter((q) => q.difficulty === filter);
-    if (tagFilter !== "all")
-      result = result.filter((q) => (q.tags ?? []).includes(tagFilter));
+    if (languageFilter !== "all") result = result.filter((q) => q.language === languageFilter);
+    if (filter !== "all") result = result.filter((q) => q.difficulty === filter);
+    // If one or more tags selected, show quests that have any of the selected tags
+    if (tagFilter.length > 0)
+      result = result.filter((q) => (q.tags ?? []).some((t) => tagFilter.includes(t)));
     return result;
   }, [quests, filter, tagFilter, languageFilter]);
 
@@ -230,9 +230,7 @@ const Quests: React.FC = () => {
               </DialogTrigger>
               <DialogContent className="max-w-2xl border-border bg-background/95 backdrop-blur-xl sm:rounded-2xl">
                 <DialogHeader className="text-left">
-                  <DialogTitle className="text-foreground">
-                    Filter quests
-                  </DialogTitle>
+                  <DialogTitle className="text-foreground">Filter quests</DialogTitle>
                   <DialogDescription>
                     Choose difficulty and concept filters to narrow down the
                     quest list.
@@ -240,142 +238,109 @@ const Quests: React.FC = () => {
                 </DialogHeader>
 
                 <div className="space-y-6">
-                  <div className="rounded-xl border border-border bg-card/70 p-4">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-sm font-semibold text-foreground">
-                          Language
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          Pick a programming language to focus on.
-                        </p>
-                      </div>
-                      {languageFilter !== "all" && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 gap-2 text-muted-foreground"
-                          onClick={() => setLanguageFilter("all")}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                          Clear
-                        </Button>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant={
-                          languageFilter === "all" ? "default" : "outline"
-                        }
-                        size="sm"
-                        onClick={() => setLanguageFilter("all")}
-                      >
-                        All
-                      </Button>
-                      {allLanguages.map((lang) => (
-                        <Button
-                          key={lang}
-                          variant={
-                            languageFilter === lang ? "default" : "outline"
-                          }
-                          size="sm"
-                          onClick={() => setLanguageFilter(lang)}
-                        >
-                          {LANGUAGE_LABELS[lang] ?? lang}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-border bg-card/70 p-4">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-sm font-semibold text-foreground">
-                          Difficulty
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          Select a difficulty level.
-                        </p>
-                      </div>
-                      {filter !== "all" && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 gap-2 text-muted-foreground"
-                          onClick={() => setFilter("all")}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                          Clear
-                        </Button>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {["all", "beginner", "intermediate", "advanced"].map(
-                        (level) => (
+                  <div className="max-h-[60vh] overflow-y-auto pr-2">
+                    <div className="rounded-xl border border-border bg-card/70 p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                          <h3 className="text-sm font-semibold text-foreground">Language</h3>
+                          <p className="text-xs text-muted-foreground">Pick a programming language to focus on.</p>
+                        </div>
+                        {languageFilter !== "all" && (
                           <Button
-                            key={level}
-                            variant={filter === level ? "default" : "outline"}
+                            type="button"
+                            variant="ghost"
                             size="sm"
-                            onClick={() => setFilter(level)}
-                            className="capitalize"
+                            className="h-8 gap-2 text-muted-foreground"
+                            onClick={() => setLanguageFilter("all")}
                           >
-                            {level}
+                            <X className="h-3.5 w-3.5" />
+                            Clear
                           </Button>
-                        ),
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl border border-border bg-card/70 p-4">
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <div>
-                        <h3 className="text-sm font-semibold text-foreground">
-                          Concepts
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          Filter quests by topic tags.
-                        </p>
+                        )}
                       </div>
-                      {tagFilter !== "all" && (
+                      <div className="flex flex-wrap gap-2">
                         <Button
-                          type="button"
-                          variant="ghost"
+                          variant={languageFilter === "all" ? "default" : "outline"}
                           size="sm"
-                          className="h-8 gap-2 text-muted-foreground"
-                          onClick={() => setTagFilter("all")}
-                        >
-                          <X className="h-3.5 w-3.5" />
-                          Clear
-                        </Button>
-                      )}
-                    </div>
-                    {allTags.length > 0 ? (
-                      <div className="flex max-h-56 flex-wrap gap-2 overflow-y-auto pr-1">
-                        <Button
-                          variant={tagFilter === "all" ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setTagFilter("all")}
+                          onClick={() => setLanguageFilter("all")}
                         >
                           All
                         </Button>
-                        {allTags.map((tag) => (
+                        {allLanguages.map((lang) => (
                           <Button
-                            key={tag}
-                            variant={tagFilter === tag ? "default" : "outline"}
+                            key={lang}
+                            variant={languageFilter === lang ? "default" : "outline"}
                             size="sm"
-                            onClick={() => setTagFilter(tag)}
+                            onClick={() => setLanguageFilter(lang)}
                           >
-                            {tag}
+                            {LANGUAGE_LABELS[lang] ?? lang}
                           </Button>
                         ))}
                       </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        No concept tags available yet.
-                      </p>
-                    )}
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-card/70 p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                          <h3 className="text-sm font-semibold text-foreground">Difficulty</h3>
+                          <p className="text-xs text-muted-foreground">Select a difficulty level.</p>
+                        </div>
+                        {filter !== "all" && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-2 text-muted-foreground"
+                            onClick={() => setFilter("all")}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {["all", "beginner", "intermediate", "advanced"].map((level) => (
+                          <Button key={level} variant={filter === level ? "default" : "outline"} size="sm" onClick={() => setFilter(level)} className="capitalize">
+                            {level}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-card/70 p-4">
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                          <h3 className="text-sm font-semibold text-foreground">Concepts</h3>
+                          <p className="text-xs text-muted-foreground">Filter quests by topic tags.</p>
+                        </div>
+                        {tagFilter.length > 0 && (
+                          <Button type="button" variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground" onClick={() => setTagFilter([])}>
+                            <X className="h-3.5 w-3.5" />
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+
+                      {allTags.length > 0 ? (
+                        <div className="flex max-h-56 flex-wrap gap-2 overflow-y-auto pr-1">
+                          <Button variant={tagFilter.length === 0 ? "default" : "outline"} size="sm" onClick={() => setTagFilter([])}>
+                            All
+                          </Button>
+                          {allTags.map((tag) => (
+                            <Button
+                              key={tag}
+                              variant={tagFilter.includes(tag) ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setTagFilter((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))}
+                            >
+                              {tag}
+                            </Button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No concept tags available yet.</p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -384,15 +349,13 @@ const Quests: React.FC = () => {
                     variant="ghost"
                     onClick={() => {
                       setFilter("all");
-                      setTagFilter("all");
+                      setTagFilter([]);
                       setLanguageFilter("all");
                     }}
                   >
                     Reset all filters
                   </Button>
-                  <Button onClick={() => setFiltersOpen(false)}>
-                    Apply filters
-                  </Button>
+                  <Button onClick={() => setFiltersOpen(false)}>Apply filters</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -420,7 +383,7 @@ const Quests: React.FC = () => {
               <span className="rounded-full border border-border bg-background/60 px-3 py-1 text-xs text-muted-foreground">
                 Concept:{" "}
                 <span className="font-medium text-foreground">
-                  {tagFilter === "all" ? "All" : tagFilter}
+                  {tagFilter.length === 0 ? "All" : tagFilter.join(", ")}
                 </span>
               </span>
             </div>
