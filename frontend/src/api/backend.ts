@@ -268,6 +268,30 @@ export interface PendingVerificationSession {
   email: string;
 }
 
+export interface PasswordResetRequestResponseDto {
+  message: string;
+  reset_id: string;
+  expires_at: string;
+}
+
+export interface PasswordResetVerifyResponseDto {
+  message: string;
+  reset_id: string;
+  expires_at: string;
+}
+
+export interface PasswordResetConfirmResponseDto {
+  message: string;
+}
+
+export interface PendingPasswordResetSession {
+  resetId: string;
+  expiresAt: string;
+  email: string;
+}
+
+const PASSWORD_RESET_SESSION_KEY = "codequest_pending_password_reset";
+
 async function adminFetch<T>(path: string): Promise<T> {
   const token = getToken();
   if (!token) throw new Error("Not authenticated");
@@ -396,6 +420,49 @@ export async function verifyEmail(verificationId: string, otp: string): Promise<
   return (await res.json()) as VerificationResponseDto;
 }
 
+export async function requestPasswordReset(email: string): Promise<PasswordResetRequestResponseDto> {
+  const res = await fetch(`${API_BASE}/api/v1/auth/password-reset/request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Password reset request failed (${res.status})`);
+  }
+  return (await res.json()) as PasswordResetRequestResponseDto;
+}
+
+export async function verifyPasswordReset(resetId: string, otp: string): Promise<PasswordResetVerifyResponseDto> {
+  const res = await fetch(`${API_BASE}/api/v1/auth/password-reset/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reset_id: resetId, otp }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Password reset verification failed (${res.status})`);
+  }
+  return (await res.json()) as PasswordResetVerifyResponseDto;
+}
+
+export async function confirmPasswordReset(
+  resetId: string,
+  password: string,
+  confirmPassword: string,
+): Promise<PasswordResetConfirmResponseDto> {
+  const res = await fetch(`${API_BASE}/api/v1/auth/password-reset/confirm`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reset_id: resetId, password, confirm_password: confirmPassword }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Password reset confirmation failed (${res.status})`);
+  }
+  return (await res.json()) as PasswordResetConfirmResponseDto;
+}
+
 export function storePendingVerification(session: PendingVerificationSession): void {
   if (typeof window === "undefined") return;
   sessionStorage.setItem(VERIFICATION_SESSION_KEY, JSON.stringify(session));
@@ -415,6 +482,27 @@ export function loadPendingVerification(): PendingVerificationSession | null {
 export function clearPendingVerification(): void {
   if (typeof window === "undefined") return;
   sessionStorage.removeItem(VERIFICATION_SESSION_KEY);
+}
+
+export function storePendingPasswordReset(session: PendingPasswordResetSession): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(PASSWORD_RESET_SESSION_KEY, JSON.stringify(session));
+}
+
+export function loadPendingPasswordReset(): PendingPasswordResetSession | null {
+  if (typeof window === "undefined") return null;
+  const raw = sessionStorage.getItem(PASSWORD_RESET_SESSION_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as PendingPasswordResetSession;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingPasswordReset(): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(PASSWORD_RESET_SESSION_KEY);
 }
 
 export async function fetchProgress(): Promise<ProgressSummaryDto> {
