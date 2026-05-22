@@ -22,7 +22,8 @@ const Login = () => {
       const role = getRole();
       navigate(role === "admin" ? "/admin" : "/quests");
     } catch (e: any) {
-      setError(e.message ?? "Login failed");
+      const message = e.message ?? "Login failed";
+      setError(message);
     } finally {
       setLoading(false);
     }

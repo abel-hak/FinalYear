@@ -16,6 +16,7 @@ import LearningPathDetail from "./pages/LearningPathDetail";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import VerifyEmail from "./pages/VerifyEmail";
 import { getToken } from "./api/backend";
 import { ThemeProvider } from "./contexts/ThemeContext";
 
@@ -41,6 +42,7 @@ const App = () => {
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
           <Route
             path="/quests"
             element={token ? <Quests /> : <Navigate to="/login" replace />}

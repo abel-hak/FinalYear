@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { register } from "@/api/backend";
+import { register, storePendingVerification } from "@/api/backend";
 import { Code2, UserPlus, Eye, EyeOff, GraduationCap, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,7 +21,29 @@ const Register = () => {
     setError(null);
     setLoading(true);
     try {
-      await register({ username, email, password, role: "learner" });
+      const result = await register({ username, email, password, role: "learner" });
+      if (result.verification_required && result.verification_id && result.expires_at) {
+        storePendingVerification({
+          verificationId: result.verification_id,
+          expiresAt: result.expires_at,
+          username,
+          email,
+        });
+        toast({
+          title: "Verification code sent",
+          description: "Check your inbox and enter the 6-digit code to finish creating your account.",
+        });
+        navigate("/verify-email", {
+          state: {
+            verificationId: result.verification_id,
+            expiresAt: result.expires_at,
+            username,
+            email,
+          },
+        });
+        return;
+      }
+
       toast({
         title: "Account created!",
         description: "You can now sign in with your credentials.",

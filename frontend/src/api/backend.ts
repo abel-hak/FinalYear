@@ -2,6 +2,7 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 const TOKEN_KEY = "codequest_access_token";
 const ROLE_KEY = "codequest_role";
+const VERIFICATION_SESSION_KEY = "codequest_pending_verification";
 
 export type QuestStatus = "completed" | "current" | "locked";
 
@@ -240,6 +241,33 @@ export interface AdminAnalyticsDto {
   weekly_activity: AdminDailyActivityDto[];
 }
 
+export interface UserPublicDto {
+  id: string;
+  username: string;
+  email: string;
+  role: "learner" | "admin";
+}
+
+export interface RegistrationResponseDto {
+  verification_required: boolean;
+  message: string;
+  verification_id?: string | null;
+  expires_at?: string | null;
+  user?: UserPublicDto | null;
+}
+
+export interface VerificationResponseDto {
+  message: string;
+  user: UserPublicDto;
+}
+
+export interface PendingVerificationSession {
+  verificationId: string;
+  expiresAt: string;
+  username: string;
+  email: string;
+}
+
 async function adminFetch<T>(path: string): Promise<T> {
   const token = getToken();
   if (!token) throw new Error("Not authenticated");
@@ -342,7 +370,7 @@ export async function register(params: {
   email: string;
   password: string;
   role: "learner" | "admin";
-}): Promise<void> {
+}): Promise<RegistrationResponseDto> {
   const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -352,6 +380,41 @@ export async function register(params: {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.detail || `Registration failed (${res.status})`);
   }
+  return (await res.json()) as RegistrationResponseDto;
+}
+
+export async function verifyEmail(verificationId: string, otp: string): Promise<VerificationResponseDto> {
+  const res = await fetch(`${API_BASE}/api/v1/auth/verify-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ verification_id: verificationId, otp }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Verification failed (${res.status})`);
+  }
+  return (await res.json()) as VerificationResponseDto;
+}
+
+export function storePendingVerification(session: PendingVerificationSession): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(VERIFICATION_SESSION_KEY, JSON.stringify(session));
+}
+
+export function loadPendingVerification(): PendingVerificationSession | null {
+  if (typeof window === "undefined") return null;
+  const raw = sessionStorage.getItem(VERIFICATION_SESSION_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as PendingVerificationSession;
+  } catch {
+    return null;
+  }
+}
+
+export function clearPendingVerification(): void {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(VERIFICATION_SESSION_KEY);
 }
 
 export async function fetchProgress(): Promise<ProgressSummaryDto> {
