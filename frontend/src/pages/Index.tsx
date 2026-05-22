@@ -20,7 +20,6 @@ import {
   Flame,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import Mascot from "@/components/Mascot";
 import OnboardingTutorial from "@/components/OnboardingTutorial";
 import DailyActivityBanner from "@/components/DailyActivityBanner";
 import {
@@ -155,14 +154,6 @@ const Index = () => {
           onSkip={handleOnboardingComplete}
         />
       )}
-
-      {/* Floating Mascot */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <Mascot
-          mood={hasSeenOnboarding ? "happy" : "celebrating"}
-          message={hasSeenOnboarding ? "Ready for a new quest?" : undefined}
-        />
-      </div>
 
       {/* Hero Section */}
       <HeroSection />
