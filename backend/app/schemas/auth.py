@@ -25,6 +25,14 @@ class UserCreate(UserBase):
     role: Literal["learner"] = "learner"
 
 
+class GoogleSignInRequest(BaseModel):
+    credential: str = Field(min_length=1)
+
+
+class GoogleOAuthExchangeRequest(BaseModel):
+    code: str = Field(min_length=1)
+
+
 class UserLogin(BaseModel):
     username: str
     password: str

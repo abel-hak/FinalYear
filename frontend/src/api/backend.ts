@@ -308,6 +308,31 @@ async function adminFetch<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+async function finalizeAuth(accessToken: string): Promise<void> {
+  const meRes = await fetch(`${API_BASE}/api/v1/auth/me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!meRes.ok) {
+    throw new Error("Failed to fetch current user after login");
+  }
+  const me = (await meRes.json()) as { role: "learner" | "admin" };
+  setAuth(accessToken, me.role);
+}
+
+export async function exchangeGoogleHandoff(code: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/v1/auth/google/exchange`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Google sign-in exchange failed (${res.status})`);
+  }
+  const data = (await res.json()) as { access_token: string; token_type: string };
+  await finalizeAuth(data.access_token);
+}
+
 export async function fetchAdminStats(): Promise<AdminStatsDto> {
   return adminFetch<AdminStatsDto>("/stats");
 }
@@ -377,16 +402,21 @@ export async function login(username: string, password: string): Promise<void> {
     throw new Error(body.detail || `Login failed (${res.status})`);
   }
   const data = (await res.json()) as { access_token: string; token_type: string };
+  await finalizeAuth(data.access_token);
+}
 
-  // Fetch /me to get role
-  const meRes = await fetch(`${API_BASE}/api/v1/auth/me`, {
-    headers: { Authorization: `Bearer ${data.access_token}` },
+export async function googleLogin(credential: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/v1/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ credential }),
   });
-  if (!meRes.ok) {
-    throw new Error("Failed to fetch current user after login");
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Google sign-in failed (${res.status})`);
   }
-  const me = (await meRes.json()) as { role: "learner" | "admin" };
-  setAuth(data.access_token, me.role);
+  const data = (await res.json()) as { access_token: string; token_type: string };
+  await finalizeAuth(data.access_token);
 }
 
 export async function register(params: {

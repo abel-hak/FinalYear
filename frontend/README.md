@@ -60,6 +60,10 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Environment variables
+
+For local development, set `VITE_API_URL` to your backend URL and `VITE_GOOGLE_CLIENT_ID` to the Google OAuth client ID used by Google Identity Services.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.

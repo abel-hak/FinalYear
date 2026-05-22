@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { register, storePendingVerification } from "@/api/backend";
 import { Code2, UserPlus, Eye, EyeOff, GraduationCap, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -83,6 +84,16 @@ const Register = () => {
         {/* Card */}
         <div className="rounded-2xl border border-border bg-card/50 backdrop-blur-xl shadow-2xl shadow-primary/5 p-8">
           <h1 className="text-xl font-semibold mb-6 text-foreground">Create your account</h1>
+
+          <div className="mb-6 space-y-4">
+            <GoogleSignInButton flow="register" actionLabel="Continue with Google" disabled={loading} />
+            <div className="relative flex items-center justify-center">
+              <span className="absolute inset-x-0 h-px bg-border" />
+              <span className="relative bg-card/80 px-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                or create with password
+              </span>
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>

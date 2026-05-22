@@ -40,13 +40,19 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode("utf-8")
 
 
-def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(
+    subject: str,
+    expires_delta: Optional[timedelta] = None,
+    extra_claims: Optional[dict[str, str]] = None,
+) -> str:
     """Create a signed JWT containing the user id as `sub`."""
     settings = get_settings()
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=30)
     )
     to_encode = {"sub": subject, "exp": expire}
+    if extra_claims:
+        to_encode.update(extra_claims)
     # SECRET_KEY and JWT_ALGORITHM should be set in .env
     secret = getattr(settings, "jwt_secret_key", None) or "dev-secret-change-me"
     algorithm = getattr(settings, "jwt_algorithm", "HS256")

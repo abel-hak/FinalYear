@@ -1,12 +1,20 @@
 """Auth endpoints: thin controllers that delegate to auth services."""
 
+import inspect
+import secrets
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.auth import (
+    GoogleSignInRequest,
+    GoogleOAuthExchangeRequest,
     PasswordResetConfirmRequest,
     PasswordResetConfirmResponse,
     PasswordResetRequest as PasswordResetRequestPayload,
@@ -26,6 +34,8 @@ from app.core.security import (
 from app.services.email_service import EmailDeliveryError
 from app.services.auth_service import (
     AuthConflictError,
+    AuthGoogleConfigError,
+    AuthGoogleHandoffError,
     AuthEmailVerificationRequiredError,
     AuthInvalidCredentialsError,
     AuthRateLimitError,
@@ -42,6 +52,9 @@ from app.services.auth_service import (
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+GOOGLE_STATE_COOKIE = "codequest_google_oauth_state"
+GOOGLE_STATE_COOKIE_MAX_AGE = 10 * 60
 
 
 @router.post("/register", response_model=RegistrationResponse, status_code=201)
@@ -120,6 +133,100 @@ async def login(
             detail=exc.message,
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
+
+
+@router.post("/google", response_model=Token)
+async def google_login(
+    request: Request,
+    payload: GoogleSignInRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Authenticate with Google and mint an app JWT."""
+    service = AuthService(db)
+    try:
+        return await service.google_login(credential=payload.credential, client_ip=_get_client_ip(request))
+    except AuthRateLimitError as exc:
+        raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=exc.message) from exc
+    except AuthGoogleConfigError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.message) from exc
+    except AuthConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message) from exc
+    except AuthInvalidCredentialsError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
+
+
+@router.get("/google/start")
+async def google_start(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Start the server-managed Google OAuth flow."""
+    service = AuthService(db)
+    state = secrets.token_urlsafe(32)
+    redirect_url = service.build_google_authorization_url(state=state)
+    response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
+    response.set_cookie(
+        key=GOOGLE_STATE_COOKIE,
+        value=state,
+        httponly=True,
+        samesite="lax",
+        secure=not get_settings().debug,
+        max_age=GOOGLE_STATE_COOKIE_MAX_AGE,
+        path="/api/v1/auth/google",
+    )
+    return response
+
+
+@router.get("/google/callback")
+async def google_callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Finish the Google OAuth flow and redirect back to the frontend with a handoff code."""
+    service = AuthService(db)
+    settings = get_settings()
+    frontend_callback = f"{settings.frontend_base_url.rstrip('/')}/auth/google/callback"
+
+    if error:
+        return RedirectResponse(url=f"{frontend_callback}?error={quote(error)}", status_code=status.HTTP_302_FOUND)
+
+    cookie_state = request.cookies.get(GOOGLE_STATE_COOKIE)
+    if not code or not state or not cookie_state or cookie_state != state:
+        return RedirectResponse(
+            url=f"{frontend_callback}?error={quote('Google sign-in could not be verified')}",
+            status_code=status.HTTP_302_FOUND,
+        )
+
+    try:
+        handoff_code = await service.handle_google_callback(code=code)
+    except (AuthGoogleConfigError, AuthInvalidCredentialsError, AuthConflictError, AuthGoogleHandoffError) as exc:
+        return RedirectResponse(url=f"{frontend_callback}?error={quote(exc.message)}", status_code=status.HTTP_302_FOUND)
+
+    response = RedirectResponse(
+        url=f"{frontend_callback}?code={quote(handoff_code)}",
+        status_code=status.HTTP_302_FOUND,
+    )
+    response.delete_cookie(key=GOOGLE_STATE_COOKIE, path="/api/v1/auth/google")
+    return response
+
+
+@router.post("/google/exchange", response_model=Token)
+async def google_exchange(
+    payload: GoogleOAuthExchangeRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Exchange the frontend handoff code for the app JWT."""
+    service = AuthService(db)
+    try:
+        result = service.redeem_google_handoff_code(payload.code)
+        if inspect.isawaitable(result):
+            return await result
+        return result
+    except AuthGoogleHandoffError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=exc.message) from exc
 
 
 @router.get("/me", response_model=UserPublic)

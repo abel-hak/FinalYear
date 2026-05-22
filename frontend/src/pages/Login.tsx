@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { login, getRole } from "@/api/backend";
 import { Code2, LogIn, Eye, EyeOff } from "lucide-react";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -56,6 +57,16 @@ const Login = () => {
         {/* Card */}
         <div className="rounded-2xl border border-border bg-card/50 backdrop-blur-xl shadow-2xl shadow-primary/5 p-8">
           <h1 className="text-xl font-semibold mb-6 text-foreground">Sign in to your account</h1>
+
+          <div className="mb-6 space-y-4">
+            <GoogleSignInButton flow="login" actionLabel="Continue with Google" disabled={loading} />
+            <div className="relative flex items-center justify-center">
+              <span className="absolute inset-x-0 h-px bg-border" />
+              <span className="relative bg-card/80 px-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                or sign in with password
+              </span>
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>

@@ -16,6 +16,7 @@ import LearningPathDetail from "./pages/LearningPathDetail";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import GoogleOAuthCallback from "./pages/GoogleOAuthCallback";
 import VerifyEmail from "./pages/VerifyEmail";
 import ForgotPassword from "./pages/ForgotPassword";
 import ForgotPasswordVerify from "./pages/ForgotPasswordVerify";
@@ -45,6 +46,7 @@ const App = () => {
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/auth/google/callback" element={<GoogleOAuthCallback />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/forgot-password/verify" element={<ForgotPasswordVerify />} />

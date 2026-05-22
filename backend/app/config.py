@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     smtp_from_email: str = "codequest@dev.com"
     smtp_timeout_seconds: int = 10
 
+    # Google sign-in
+    google_client_id: str | None = None
+    google_client_secret: str | None = None
+    google_redirect_uri: str = "http://localhost:8000/api/v1/auth/google/callback"
+    frontend_base_url: str = "http://localhost:5173"
+
     # Judge0 code execution (used for sandboxed multi-language submissions).
     # Dev: RapidAPI Judge0 CE. Prod: self-hosted Judge0 instance.
     judge0_base_url: str | None = None  # e.g. "https://judge0-ce.p.rapidapi.com"

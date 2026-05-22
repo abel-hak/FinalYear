@@ -30,6 +30,28 @@ class AuthRepository:
         )
         return result.scalar_one_or_none()
 
+    async def find_active_by_email(self, email: str) -> User | None:
+        result = await self.db.execute(
+            select(User).where(User.email == email, User.is_deleted.is_(False))
+        )
+        return result.scalar_one_or_none()
+
+    async def find_by_username(self, username: str) -> User | None:
+        result = await self.db.execute(select(User).where(User.username == username))
+        return result.scalar_one_or_none()
+
+    async def find_by_id(self, user_id: str) -> User | None:
+        result = await self.db.execute(
+            select(User).where(User.id == user_id, User.is_deleted.is_(False))
+        )
+        return result.scalar_one_or_none()
+
+    async def find_by_google_sub(self, google_sub: str) -> User | None:
+        result = await self.db.execute(
+            select(User).where(User.google_sub == google_sub, User.is_deleted.is_(False))
+        )
+        return result.scalar_one_or_none()
+
     async def find_learner_by_email(self, email: str) -> User | None:
         result = await self.db.execute(
             select(User).where(User.email == email, User.role == "learner", User.is_deleted.is_(False))
@@ -121,13 +143,15 @@ class AuthRepository:
         *,
         username: str,
         email: str,
-        password_hash: str,
+        password_hash: str | None,
         role: str,
+        google_sub: str | None = None,
     ) -> User:
         user = User(
             username=username,
             email=email,
             password_hash=password_hash,
+            google_sub=google_sub,
             role=role,
         )
         self.db.add(user)
@@ -139,4 +163,9 @@ class AuthRepository:
             self.db.add(Admin(user_id=user.id, admin_status="active"))
             self.db.add(Learner(user_id=user.id))
 
+        return user
+
+    async def link_google_subject(self, user: User, google_sub: str) -> User:
+        user.google_sub = google_sub
+        await self.db.flush()
         return user
