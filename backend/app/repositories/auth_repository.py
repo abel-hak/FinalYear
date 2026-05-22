@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.admin import Admin
 from app.models.learner import Learner
+from app.models.pending_registration import PendingRegistration
 from app.models.user import User
 
 
@@ -27,6 +28,53 @@ class AuthRepository:
             select(User).where(User.username == username, User.is_deleted.is_(False))
         )
         return result.scalar_one_or_none()
+
+    async def find_pending_by_username(self, username: str) -> PendingRegistration | None:
+        result = await self.db.execute(
+            select(PendingRegistration).where(PendingRegistration.username == username)
+        )
+        return result.scalar_one_or_none()
+
+    async def find_pending_by_username_or_email(self, username: str, email: str) -> PendingRegistration | None:
+        result = await self.db.execute(
+            select(PendingRegistration).where(
+                (PendingRegistration.username == username) | (PendingRegistration.email == email)
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def find_pending_by_id(self, pending_id: str) -> PendingRegistration | None:
+        result = await self.db.execute(
+            select(PendingRegistration).where(PendingRegistration.id == pending_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def create_pending_registration(
+        self,
+        *,
+        username: str,
+        email: str,
+        password_hash: str,
+        role: str,
+        otp_hash: str,
+        otp_expires_at,
+        otp_attempts_remaining: int,
+    ) -> PendingRegistration:
+        pending = PendingRegistration(
+            username=username,
+            email=email,
+            password_hash=password_hash,
+            role=role,
+            otp_hash=otp_hash,
+            otp_expires_at=otp_expires_at,
+            otp_attempts_remaining=otp_attempts_remaining,
+        )
+        self.db.add(pending)
+        await self.db.flush()
+        return pending
+
+    async def delete_pending_registration(self, pending: PendingRegistration) -> None:
+        await self.db.delete(pending)
 
     async def create_user_with_role_profiles(
         self,

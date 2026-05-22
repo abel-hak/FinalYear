@@ -41,6 +41,7 @@ _load_test_env_file()
 # JUDGE0_BASE_URL so the runner factory falls through to USE_LOCAL_SANDBOX.
 os.environ["JUDGE0_BASE_URL"] = ""
 os.environ["USE_LOCAL_SANDBOX"] = "true"
+os.environ["EMAIL_VERIFICATION_REQUIRED"] = "false"
 
 
 def _validate_db_name(name: str) -> None:

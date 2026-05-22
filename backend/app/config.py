@@ -30,6 +30,18 @@ class Settings(BaseSettings):
     ai_api_key: str | None = None
     ai_model: str = "gpt-4o-mini"
 
+    # Email verification
+    email_verification_required: bool = True
+    email_verification_otp_ttl_minutes: int = 15
+    email_verification_max_attempts: int = 3
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_use_tls: bool = True
+    smtp_from_email: str = "codequest@dev.com"
+    smtp_timeout_seconds: int = 10
+
     # Judge0 code execution (used for sandboxed multi-language submissions).
     # Dev: RapidAPI Judge0 CE. Prod: self-hosted Judge0 instance.
     judge0_base_url: str | None = None  # e.g. "https://judge0-ce.p.rapidapi.com"

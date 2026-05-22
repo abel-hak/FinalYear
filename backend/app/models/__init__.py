@@ -4,6 +4,7 @@ Import Base and all models here so Alembic can discover them in env.py.
 """
 from app.db.base import Base
 from app.models.user import User
+from app.models.pending_registration import PendingRegistration
 from app.models.learner import Learner
 from app.models.admin import Admin
 from app.models.quest import Quest
@@ -15,6 +16,7 @@ from app.models.learning_path import LearningPath, LearningPathQuest
 __all__ = [
     "Base",
     "User",
+    "PendingRegistration",
     "Learner",
     "Admin",
     "Quest",

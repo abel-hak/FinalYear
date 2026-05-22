@@ -6,22 +6,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.auth import UserCreate, UserPublic, Token
+from app.schemas.auth import RegistrationResponse, Token, UserCreate, UserPublic, VerificationRequest, VerificationResponse
 from app.core.security import (
     get_current_user,
 )
+from app.services.email_service import EmailDeliveryError
 from app.services.auth_service import (
     AuthConflictError,
+    AuthEmailVerificationRequiredError,
     AuthInvalidCredentialsError,
     AuthRateLimitError,
     AuthService,
+    AuthVerificationAttemptsExceededError,
+    AuthVerificationCodeInvalidError,
+    AuthVerificationExpiredError,
 )
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=UserPublic, status_code=201)
+@router.post("/register", response_model=RegistrationResponse, status_code=201)
 async def register_user(
     payload: UserCreate,
     db: AsyncSession = Depends(get_db),
@@ -30,6 +35,26 @@ async def register_user(
     service = AuthService(db)
     try:
         return await service.register_user(payload)
+    except AuthConflictError as exc:
+        raise HTTPException(status_code=400, detail=exc.message) from exc
+    except EmailDeliveryError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=exc.args[0]) from exc
+
+
+@router.post("/verify-email", response_model=VerificationResponse)
+async def verify_email(
+    payload: VerificationRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    service = AuthService(db)
+    try:
+        return await service.verify_registration(verification_id=payload.verification_id, otp=payload.otp)
+    except AuthVerificationExpiredError as exc:
+        raise HTTPException(status_code=410, detail=exc.message) from exc
+    except AuthVerificationAttemptsExceededError as exc:
+        raise HTTPException(status_code=410, detail=exc.message) from exc
+    except AuthVerificationCodeInvalidError as exc:
+        raise HTTPException(status_code=400, detail=exc.message) from exc
     except AuthConflictError as exc:
         raise HTTPException(status_code=400, detail=exc.message) from exc
 
@@ -67,6 +92,10 @@ async def login(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=exc.message,
         ) from exc
+    except AuthEmailVerificationRequiredError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=exc.message) from exc
+    except AuthVerificationExpiredError as exc:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail=exc.message) from exc
     except AuthInvalidCredentialsError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

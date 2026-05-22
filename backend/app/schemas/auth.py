@@ -1,7 +1,8 @@
-"""
-Pydantic schemas for authentication & user-facing auth payloads.
-"""
+"""Pydantic schemas for authentication and email verification payloads."""
+
+from datetime import datetime
 from typing import Literal
+
 from pydantic import BaseModel, EmailStr, Field, UUID4
 
 
@@ -21,7 +22,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(min_length=6, max_length=128)
-    role: Literal["learner", "admin"] = "learner"
+    role: Literal["learner"] = "learner"
 
 
 class UserLogin(BaseModel):
@@ -35,4 +36,22 @@ class UserPublic(UserBase):
 
     class Config:
         from_attributes = True
+
+
+class RegistrationResponse(BaseModel):
+    verification_required: bool
+    message: str
+    verification_id: UUID4 | None = None
+    expires_at: datetime | None = None
+    user: UserPublic | None = None
+
+
+class VerificationRequest(BaseModel):
+    verification_id: UUID4
+    otp: str = Field(pattern=r"^\d{6}$", min_length=6, max_length=6)
+
+
+class VerificationResponse(BaseModel):
+    message: str
+    user: UserPublic
 
