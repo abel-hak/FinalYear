@@ -132,12 +132,6 @@ const Quests: React.FC = () => {
     return result;
   }, [quests, filter, tagFilter, languageFilter]);
 
-  const getCosineOffset = React.useCallback((index: number) => {
-    const amplitude = 170;
-    const frequency = 0.9;
-    return Math.round(Math.cos(index * frequency) * amplitude);
-  }, []);
-
   return (
     <div className="flex flex-col items-center min-h-screen bg-background">
       <Header />
@@ -271,7 +265,9 @@ const Quests: React.FC = () => {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button
-                        variant={languageFilter === "all" ? "default" : "outline"}
+                        variant={
+                          languageFilter === "all" ? "default" : "outline"
+                        }
                         size="sm"
                         onClick={() => setLanguageFilter("all")}
                       >
@@ -280,7 +276,9 @@ const Quests: React.FC = () => {
                       {allLanguages.map((lang) => (
                         <Button
                           key={lang}
-                          variant={languageFilter === lang ? "default" : "outline"}
+                          variant={
+                            languageFilter === lang ? "default" : "outline"
+                          }
                           size="sm"
                           onClick={() => setLanguageFilter(lang)}
                         >
@@ -410,7 +408,7 @@ const Quests: React.FC = () => {
                 <span className="font-medium text-foreground">
                   {languageFilter === "all"
                     ? "All"
-                    : LANGUAGE_LABELS[languageFilter] ?? languageFilter}
+                    : (LANGUAGE_LABELS[languageFilter] ?? languageFilter)}
                 </span>
               </span>
               <span className="rounded-full border border-border bg-background/60 px-3 py-1 text-xs text-muted-foreground">
@@ -431,54 +429,54 @@ const Quests: React.FC = () => {
 
         {/* Quest Grid */}
         {loading ? (
-          <div className="flex flex-col items-center gap-8">
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 8 }).map((_, i) => (
               <div
                 key={i}
-                className="h-44 w-44 rounded-full border border-border bg-card/70 animate-pulse"
+                className="h-56 rounded-3xl border border-border bg-card/70 p-5 animate-pulse"
               >
-                <div className="h-full w-full rounded-full border-[10px] border-transparent" />
+                <div className="flex h-full flex-col justify-between">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="h-6 w-24 rounded-full bg-muted/70" />
+                      <div className="h-10 w-14 rounded-2xl bg-muted/70" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-5 w-3/4 rounded-full bg-muted/70" />
+                      <div className="h-5 w-2/3 rounded-full bg-muted/70" />
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="h-4 w-full rounded-full bg-muted/70" />
+                    <div className="h-4 w-5/6 rounded-full bg-muted/70" />
+                    <div className="flex flex-wrap gap-2">
+                      <div className="h-6 w-16 rounded-full bg-muted/70" />
+                      <div className="h-6 w-20 rounded-full bg-muted/70" />
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         ) : error ? (
           <p className="text-red-500 text-sm text-center">{error}</p>
         ) : (
-          <div className="relative w-full overflow-x-clip py-2">
-            <div className="pointer-events-none absolute inset-x-0 top-0 hidden h-full md:block">
-              <div className="absolute left-1/2 top-8 h-[calc(100%-4rem)] w-px -translate-x-1/2 bg-gradient-to-b from-primary/10 via-primary/20 to-primary/10" />
-              <div className="absolute left-1/2 top-10 h-24 w-24 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
-            </div>
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {filteredQuests.map((quest) => {
+              const card = <QuestCard quest={quest} />;
 
-            <div className="relative flex flex-col items-center gap-8">
-              {filteredQuests.map((quest, index) => (
-                <div
-                  key={quest.id}
-                  className="relative w-full flex justify-center md:translate-x-[var(--wave-x)]"
-                  style={
-                    {
-                      "--wave-x": `${getCosineOffset(index)}px`,
-                    } as React.CSSProperties
-                  }
-                >
-                  <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute left-1/2 top-[4.5rem] hidden h-16 w-[min(24rem,55vw)] -translate-x-1/2 -translate-y-1/2 md:block"
-                  >
-                    <div className="absolute inset-x-6 top-1/2 h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
-                    <div className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full bg-background/70 shadow-none backdrop-blur-md ring-1 ring-primary/10" />
-                    <div className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-[2px]" />
-                  </div>
-
-                  <Link
-                    to={quest.status !== "locked" ? `/quest/${quest.id}` : "#"}
-                    className="w-full max-w-[560px]"
-                  >
-                    <QuestCard quest={quest} />
-                  </Link>
+              return (
+                <div key={quest.id} className="h-full">
+                  {quest.status !== "locked" ? (
+                    <Link to={`/quest/${quest.id}`} className="block h-full">
+                      {card}
+                    </Link>
+                  ) : (
+                    <div className="h-full">{card}</div>
+                  )}
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         )}
       </main>
