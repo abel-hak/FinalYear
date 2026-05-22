@@ -17,7 +17,19 @@ from app.core.security import create_access_token, hash_password, verify_passwor
 from app.services.email_service import EmailDeliveryError, SmtpEmailService
 from app.models.user import User
 from app.repositories.auth_repository import AuthRepository
-from app.schemas.auth import RegistrationResponse, Token, UserCreate, UserPublic, VerificationResponse
+from app.schemas.auth import (
+    PasswordResetConfirmRequest,
+    PasswordResetConfirmResponse,
+    PasswordResetRequest,
+    PasswordResetRequestResponse,
+    PasswordResetVerifyRequest,
+    PasswordResetVerifyResponse,
+    RegistrationResponse,
+    Token,
+    UserCreate,
+    UserPublic,
+    VerificationResponse,
+)
 
 
 @dataclass
@@ -52,6 +64,31 @@ class AuthVerificationAttemptsExceededError(Exception):
 
 @dataclass
 class AuthVerificationCodeInvalidError(Exception):
+    message: str
+
+
+@dataclass
+class AuthPasswordResetExpiredError(Exception):
+    message: str
+
+
+@dataclass
+class AuthPasswordResetAttemptsExceededError(Exception):
+    message: str
+
+
+@dataclass
+class AuthPasswordResetCodeInvalidError(Exception):
+    message: str
+
+
+@dataclass
+class AuthPasswordResetInvalidStateError(Exception):
+    message: str
+
+
+@dataclass
+class AuthPasswordResetMismatchError(Exception):
     message: str
 
 
@@ -195,3 +232,98 @@ class AuthService:
             expires_delta=timedelta(minutes=minutes),
         )
         return Token(access_token=access_token)
+
+    async def request_password_reset(self, *, email: str) -> PasswordResetRequestResponse:
+        settings = get_settings()
+        existing = await self.repo.find_password_reset_by_email(email)
+        if existing:
+            await self.repo.delete_password_reset_request(existing)
+            await self.db.flush()
+
+        otp = f"{secrets.randbelow(1_000_000):06d}"
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.password_reset_otp_ttl_minutes)
+        reset_request = await self.repo.create_password_reset_request(
+            email=email,
+            otp_hash=hash_password(otp),
+            otp_expires_at=expires_at,
+            otp_attempts_remaining=settings.password_reset_max_attempts,
+        )
+        await self.db.flush()
+
+        learner = await self.repo.find_learner_by_email(email)
+        if learner:
+            await self.email_service.send_password_reset_email(
+                to_email=email,
+                username=learner.username,
+                otp=otp,
+                expires_minutes=settings.password_reset_otp_ttl_minutes,
+            )
+
+        return PasswordResetRequestResponse(
+            message="If the email is registered, a reset code has been sent",
+            reset_id=reset_request.id,
+            expires_at=expires_at,
+        )
+
+    async def verify_password_reset(self, *, reset_id, otp: str) -> PasswordResetVerifyResponse:
+        reset_request = await self.repo.find_password_reset_by_id(reset_id)
+        if not reset_request:
+            raise AuthPasswordResetExpiredError("Password reset request not found or has expired")
+
+        now = datetime.now(timezone.utc)
+        if reset_request.otp_expires_at <= now:
+            await self.repo.delete_password_reset_request(reset_request)
+            await self.db.commit()
+            raise AuthPasswordResetExpiredError("Password reset code expired. Please request a new one.")
+
+        if not verify_password(otp, reset_request.otp_hash):
+            reset_request.otp_attempts_remaining -= 1
+            await self.db.flush()
+            if reset_request.otp_attempts_remaining <= 0:
+                await self.repo.delete_password_reset_request(reset_request)
+                await self.db.commit()
+                raise AuthPasswordResetAttemptsExceededError(
+                    "Password reset attempts exhausted. Please request a new code."
+                )
+            await self.db.commit()
+            raise AuthPasswordResetCodeInvalidError(
+                f"Incorrect verification code. {reset_request.otp_attempts_remaining} attempts remaining."
+            )
+
+        reset_request.otp_verified_at = now
+        await self.db.flush()
+        await self.db.commit()
+        return PasswordResetVerifyResponse(
+            message="Password reset code verified",
+            reset_id=reset_request.id,
+            expires_at=reset_request.otp_expires_at,
+        )
+
+    async def confirm_password_reset(self, payload: PasswordResetConfirmRequest) -> PasswordResetConfirmResponse:
+        if payload.password != payload.confirm_password:
+            raise AuthPasswordResetMismatchError("Passwords do not match")
+
+        reset_request = await self.repo.find_password_reset_by_id(payload.reset_id)
+        if not reset_request:
+            raise AuthPasswordResetInvalidStateError("Password reset request not found or has expired")
+
+        now = datetime.now(timezone.utc)
+        if reset_request.otp_expires_at <= now:
+            await self.repo.delete_password_reset_request(reset_request)
+            await self.db.commit()
+            raise AuthPasswordResetExpiredError("Password reset code expired. Please request a new one.")
+
+        if reset_request.otp_verified_at is None:
+            raise AuthPasswordResetInvalidStateError("Password reset code has not been verified")
+
+        learner = await self.repo.find_learner_by_email(reset_request.email)
+        if not learner:
+            await self.repo.delete_password_reset_request(reset_request)
+            await self.db.commit()
+            raise AuthPasswordResetInvalidStateError("Password reset request is no longer valid")
+
+        learner.password_hash = hash_password(payload.password)
+        await self.repo.delete_password_reset_request(reset_request)
+        await self.db.flush()
+        await self.db.commit()
+        return PasswordResetConfirmResponse(message="Password updated successfully")

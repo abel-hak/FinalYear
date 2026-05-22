@@ -28,6 +28,15 @@ class SmtpEmailService:
         )
         await asyncio.to_thread(self._send, to_email, subject, body)
 
+    async def send_password_reset_email(self, *, to_email: str, username: str, otp: str, expires_minutes: int) -> None:
+        subject = "Reset your CodeQuest password"
+        body = (
+            f"Hi {username},\n\n"
+            f"Your password reset code is {otp}. It expires in {expires_minutes} minutes.\n\n"
+            "If you did not request a password reset, you can ignore this email."
+        )
+        await asyncio.to_thread(self._send, to_email, subject, body)
+
     async def send_welcome_email(self, *, to_email: str, username: str) -> None:
         subject = "Welcome to CodeQuest"
         body = (

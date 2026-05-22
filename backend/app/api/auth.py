@@ -6,7 +6,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.auth import RegistrationResponse, Token, UserCreate, UserPublic, VerificationRequest, VerificationResponse
+from app.schemas.auth import (
+    PasswordResetConfirmRequest,
+    PasswordResetConfirmResponse,
+    PasswordResetRequest as PasswordResetRequestPayload,
+    PasswordResetRequestResponse,
+    PasswordResetVerifyRequest,
+    PasswordResetVerifyResponse,
+    RegistrationResponse,
+    Token,
+    UserCreate,
+    UserPublic,
+    VerificationRequest,
+    VerificationResponse,
+)
 from app.core.security import (
     get_current_user,
 )
@@ -16,6 +29,11 @@ from app.services.auth_service import (
     AuthEmailVerificationRequiredError,
     AuthInvalidCredentialsError,
     AuthRateLimitError,
+    AuthPasswordResetAttemptsExceededError,
+    AuthPasswordResetCodeInvalidError,
+    AuthPasswordResetExpiredError,
+    AuthPasswordResetInvalidStateError,
+    AuthPasswordResetMismatchError,
     AuthService,
     AuthVerificationAttemptsExceededError,
     AuthVerificationCodeInvalidError,
@@ -108,5 +126,46 @@ async def login(
 async def read_current_user(current_user: User = Depends(get_current_user)) -> User:
     """Return the currently authenticated user's public profile."""
     return current_user
+
+
+@router.post("/password-reset/request", response_model=PasswordResetRequestResponse)
+async def request_password_reset(
+    payload: PasswordResetRequestPayload,
+    db: AsyncSession = Depends(get_db),
+):
+    service = AuthService(db)
+    return await service.request_password_reset(email=payload.email)
+
+
+@router.post("/password-reset/verify", response_model=PasswordResetVerifyResponse)
+async def verify_password_reset(
+    payload: PasswordResetVerifyRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    service = AuthService(db)
+    try:
+        return await service.verify_password_reset(reset_id=payload.reset_id, otp=payload.otp)
+    except AuthPasswordResetExpiredError as exc:
+        raise HTTPException(status_code=410, detail=exc.message) from exc
+    except AuthPasswordResetAttemptsExceededError as exc:
+        raise HTTPException(status_code=410, detail=exc.message) from exc
+    except AuthPasswordResetCodeInvalidError as exc:
+        raise HTTPException(status_code=400, detail=exc.message) from exc
+
+
+@router.post("/password-reset/confirm", response_model=PasswordResetConfirmResponse)
+async def confirm_password_reset(
+    payload: PasswordResetConfirmRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    service = AuthService(db)
+    try:
+        return await service.confirm_password_reset(payload)
+    except AuthPasswordResetExpiredError as exc:
+        raise HTTPException(status_code=410, detail=exc.message) from exc
+    except AuthPasswordResetInvalidStateError as exc:
+        raise HTTPException(status_code=400, detail=exc.message) from exc
+    except AuthPasswordResetMismatchError as exc:
+        raise HTTPException(status_code=400, detail=exc.message) from exc
 
 

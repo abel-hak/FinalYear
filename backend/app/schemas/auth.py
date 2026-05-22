@@ -55,3 +55,34 @@ class VerificationResponse(BaseModel):
     message: str
     user: UserPublic
 
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetRequestResponse(BaseModel):
+    message: str
+    reset_id: UUID4
+    expires_at: datetime
+
+
+class PasswordResetVerifyRequest(BaseModel):
+    reset_id: UUID4
+    otp: str = Field(pattern=r"^\d{6}$", min_length=6, max_length=6)
+
+
+class PasswordResetVerifyResponse(BaseModel):
+    message: str
+    reset_id: UUID4
+    expires_at: datetime
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    reset_id: UUID4
+    password: str = Field(min_length=6, max_length=128)
+    confirm_password: str = Field(min_length=6, max_length=128)
+
+
+class PasswordResetConfirmResponse(BaseModel):
+    message: str
+

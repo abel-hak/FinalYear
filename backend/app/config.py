@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     email_verification_required: bool = True
     email_verification_otp_ttl_minutes: int = 15
     email_verification_max_attempts: int = 3
+    password_reset_otp_ttl_minutes: int = 5
+    password_reset_max_attempts: int = 3
     smtp_host: str | None = None
     smtp_port: int = 587
     smtp_user: str | None = None

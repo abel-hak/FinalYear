@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.admin import Admin
 from app.models.learner import Learner
+from app.models.password_reset_request import PasswordResetRequest
 from app.models.pending_registration import PendingRegistration
 from app.models.user import User
 
@@ -26,6 +27,12 @@ class AuthRepository:
     async def find_active_by_username(self, username: str) -> User | None:
         result = await self.db.execute(
             select(User).where(User.username == username, User.is_deleted.is_(False))
+        )
+        return result.scalar_one_or_none()
+
+    async def find_learner_by_email(self, email: str) -> User | None:
+        result = await self.db.execute(
+            select(User).where(User.email == email, User.role == "learner", User.is_deleted.is_(False))
         )
         return result.scalar_one_or_none()
 
@@ -75,6 +82,39 @@ class AuthRepository:
 
     async def delete_pending_registration(self, pending: PendingRegistration) -> None:
         await self.db.delete(pending)
+
+    async def find_password_reset_by_email(self, email: str) -> PasswordResetRequest | None:
+        result = await self.db.execute(
+            select(PasswordResetRequest).where(PasswordResetRequest.email == email)
+        )
+        return result.scalar_one_or_none()
+
+    async def find_password_reset_by_id(self, reset_id: str) -> PasswordResetRequest | None:
+        result = await self.db.execute(
+            select(PasswordResetRequest).where(PasswordResetRequest.id == reset_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def create_password_reset_request(
+        self,
+        *,
+        email: str,
+        otp_hash: str,
+        otp_expires_at,
+        otp_attempts_remaining: int,
+    ) -> PasswordResetRequest:
+        reset_request = PasswordResetRequest(
+            email=email,
+            otp_hash=otp_hash,
+            otp_expires_at=otp_expires_at,
+            otp_attempts_remaining=otp_attempts_remaining,
+        )
+        self.db.add(reset_request)
+        await self.db.flush()
+        return reset_request
+
+    async def delete_password_reset_request(self, reset_request: PasswordResetRequest) -> None:
+        await self.db.delete(reset_request)
 
     async def create_user_with_role_profiles(
         self,
