@@ -64,7 +64,7 @@ const ForgotPassword = () => {
             <span className="text-2xl font-bold gradient-text">CodeQuest</span>
           </Link>
           <p className="text-muted-foreground text-sm mt-2">
-            Enter the email on your learner account and we&apos;ll send a 6-digit reset code.
+            Enter the email associated with your account and we&apos;ll send a 6-digit reset code.
           </p>
         </div>
 
@@ -75,7 +75,6 @@ const ForgotPassword = () => {
             </div>
             <div>
               <h1 className="text-xl font-semibold text-foreground">Reset your password</h1>
-              <p className="text-sm text-muted-foreground">We only support learners for this flow.</p>
             </div>
           </div>
 
