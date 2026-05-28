@@ -2,7 +2,7 @@
 Schemas for admin quest & test case management.
 """
 from typing import Optional, List
-from pydantic import BaseModel, UUID4
+from pydantic import BaseModel, UUID4, EmailStr
 from datetime import datetime
 
 
@@ -63,6 +63,7 @@ class QuestAdminBase(BaseModel):
 
 
 class QuestCreate(QuestAdminBase):
+    learning_path_id: UUID4 | None = None
     pass
 
 
@@ -126,6 +127,7 @@ class LearningPathCreate(BaseModel):
     order_rank: int = 0
     language: str = "python"
     checkpoint_quest_id: UUID4 | None = None
+    creator_email: EmailStr | None = None
 
 
 class LearningPathUpdate(BaseModel):
@@ -135,6 +137,7 @@ class LearningPathUpdate(BaseModel):
     order_rank: Optional[int] = None
     language: Optional[str] = None
     checkpoint_quest_id: Optional[UUID4] = None
+    creator_email: EmailStr | None = None
 
 
 class LearningPathQuestAdmin(BaseModel):
@@ -157,6 +160,8 @@ class LearningPathAdmin(BaseModel):
     language: str = "python"
     quest_count: int = 0
     checkpoint_quest_id: UUID4 | None = None
+    creator_user_id: UUID4 | None = None
+    creator_email: EmailStr | None = None
 
     class Config:
         from_attributes = True
@@ -165,4 +170,13 @@ class LearningPathAdmin(BaseModel):
 class LearningPathAddQuest(BaseModel):
     quest_id: UUID4
     order_rank: Optional[int] = None  # append at end if not set
+
+
+class LearningPathReorderItem(BaseModel):
+    quest_id: UUID4
+    order_rank: int
+
+
+class LearningPathReorder(BaseModel):
+    items: list[LearningPathReorderItem]
 

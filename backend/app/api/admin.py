@@ -215,7 +215,7 @@ async def create_learning_path_admin(
 ):
     """Create a new learning path."""
     service = AdminService(db)
-    return await service.create_learning_path(payload)
+    return await service.create_learning_path(payload, current_admin=current_admin)
 
 
 @router.put("/learning-paths/{path_id}", response_model=LearningPathAdmin)
@@ -228,7 +228,7 @@ async def update_learning_path_admin(
     """Update learning path fields."""
     service = AdminService(db)
     try:
-        return await service.update_learning_path(path_id=path_id, payload=payload)
+        return await service.update_learning_path(path_id=path_id, payload=payload, current_admin=current_admin)
     except AdminNotFoundError as exc:
         raise HTTPException(status_code=404, detail=exc.message) from exc
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +40,6 @@ import {
   BookOpen,
   Loader2,
   GripVertical,
-  X,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -49,9 +48,8 @@ import {
   updateAdminLearningPath,
   deleteAdminLearningPath,
   fetchAdminPathQuests,
-  addQuestToPath,
-  removeQuestFromPath,
   fetchAdminQuests,
+  removeQuestFromPath,
   type AdminLearningPathDto,
   type AdminPathQuestDto,
   type AdminQuestDto,
@@ -63,15 +61,14 @@ export const PathManagement = () => {
   const [paths, setPaths] = useState<AdminLearningPathDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [editorMode, setEditorMode] = useState<"create" | "edit" | "assign">("create");
   const [editingPath, setEditingPath] = useState<AdminLearningPathDto | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminLearningPathDto | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [expandedPathId, setExpandedPathId] = useState<string | null>(null);
   const [pathQuests, setPathQuests] = useState<Record<string, AdminPathQuestDto[]>>({});
-  const [addQuestPathId, setAddQuestPathId] = useState<string | null>(null);
-  const [availableQuests, setAvailableQuests] = useState<AdminQuestDto[]>([]);
 
-  const loadPaths = async () => {
+  const loadPaths = useCallback(async () => {
     setLoading(true);
     try {
       const data = await fetchAdminLearningPaths();
@@ -85,19 +82,11 @@ export const PathManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     loadPaths();
-  }, []);
-
-  useEffect(() => {
-    if (addQuestPathId) {
-      fetchAdminQuests()
-        .then((q) => setAvailableQuests(q.filter((x) => !x.is_deleted)))
-        .catch(() => setAvailableQuests([]));
-    }
-  }, [addQuestPathId]);
+  }, [loadPaths]);
 
   const loadPathQuests = async (pathId: string) => {
     try {
@@ -119,11 +108,19 @@ export const PathManagement = () => {
 
   const handleCreate = () => {
     setEditingPath(null);
+    setEditorMode("create");
     setEditorOpen(true);
   };
 
   const handleEdit = (path: AdminLearningPathDto) => {
     setEditingPath(path);
+    setEditorMode("edit");
+    setEditorOpen(true);
+  };
+
+  const handleAssignCreator = (path: AdminLearningPathDto) => {
+    setEditingPath(path);
+    setEditorMode("assign");
     setEditorOpen(true);
   };
 
@@ -134,7 +131,8 @@ export const PathManagement = () => {
     order_rank: number;
     language: string;
     checkpoint_quest_id?: string | null;
-  }) => {
+    creator_email?: string | null;
+  }): Promise<boolean> => {
     try {
       if (editingPath) {
         await updateAdminLearningPath(editingPath.id, data);
@@ -145,13 +143,15 @@ export const PathManagement = () => {
       }
       setEditorOpen(false);
       setEditingPath(null);
-      loadPaths();
+      await loadPaths();
+      return true;
     } catch (e) {
       toast({
         title: "Failed to save",
         description: e instanceof Error ? e.message : "Unknown error",
         variant: "destructive",
       });
+      return false;
     }
   };
 
@@ -171,22 +171,6 @@ export const PathManagement = () => {
       });
     } finally {
       setDeleting(false);
-    }
-  };
-
-  const handleAddQuest = async (pathId: string, questId: string) => {
-    try {
-      await addQuestToPath(pathId, questId);
-      loadPathQuests(pathId);
-      loadPaths();
-      setAddQuestPathId(null);
-      toast({ title: "Quest added to path" });
-    } catch (e) {
-      toast({
-        title: "Failed to add quest",
-        description: e instanceof Error ? e.message : "Unknown error",
-        variant: "destructive",
-      });
     }
   };
 
@@ -211,7 +195,7 @@ export const PathManagement = () => {
     <div className="space-y-6">
       <div className="flex justify-between">
         <p className="text-sm text-muted-foreground">
-          Create and manage learning paths. Assign quests to each path for level-by-level progression.
+          Create and manage learning paths. Assign quests inside each path, and invite a creator by email when a path needs an owner.
         </p>
         <Button className="gap-2" onClick={handleCreate}>
           <Plus className="w-4 h-4" />
@@ -249,6 +233,12 @@ export const PathManagement = () => {
                         <Badge variant="outline" className="bg-secondary/40 text-foreground border-border">
                           {(path.language ?? "python").toUpperCase()}
                         </Badge>
+                          <Badge
+                            variant="outline"
+                            className={path.creator_user_id ? "bg-emerald-500/10 text-emerald-200 border-emerald-500/20" : "bg-muted/40 text-muted-foreground border-border"}
+                          >
+                            {path.creator_email ? `Creator: ${path.creator_email}` : path.creator_user_id ? "Creator assigned" : "No creator"}
+                          </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground line-clamp-1">{path.description}</p>
                       <p className="text-xs text-muted-foreground mt-1">{path.quest_count} quests</p>
@@ -262,7 +252,7 @@ export const PathManagement = () => {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem className="gap-2" onClick={() => handleEdit(path)}>
                           <Pencil className="w-4 h-4" />
-                          Edit
+                          Edit details
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="gap-2 text-destructive focus:text-destructive"
@@ -273,8 +263,12 @@ export const PathManagement = () => {
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    <Button variant="outline" size="sm" onClick={() => handleAssignCreator(path)}>
+                      <BookOpen className="w-4 h-4 mr-1" />
+                      Assign creator
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => handleExpand(path.id)}>
-                      {expandedPathId === path.id ? "Hide" : "Manage quests"}
+                      {expandedPathId === path.id ? "Hide quests" : "Open quests"}
                     </Button>
                   </div>
 
@@ -282,40 +276,8 @@ export const PathManagement = () => {
                     <div className="mt-4 pt-4 border-t border-border space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">Quests in path</span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setAddQuestPathId(addQuestPathId === path.id ? null : path.id)}
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          Add quest
-                        </Button>
+                        <span className="text-xs text-muted-foreground">Create quests inside the path editor or remove them here.</span>
                       </div>
-                      {addQuestPathId === path.id && (
-                        <div className="flex gap-2 items-center flex-wrap">
-                          <Select
-                            onValueChange={(questId) => {
-                              handleAddQuest(path.id, questId);
-                            }}
-                          >
-                            <SelectTrigger className="w-[280px]">
-                              <SelectValue placeholder="Select a quest to add..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableQuests
-                                .filter((q) => !(pathQuests[path.id] ?? []).some((pq) => pq.quest_id === q.id))
-                                .map((q) => (
-                                  <SelectItem key={q.id} value={q.id}>
-                                    {q.title} (Level {q.level})
-                                  </SelectItem>
-                                ))}
-                            </SelectContent>
-                          </Select>
-                          <Button variant="ghost" size="icon" onClick={() => setAddQuestPathId(null)}>
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      )}
                       <div className="space-y-2">
                         {(pathQuests[path.id] ?? []).length === 0 ? (
                           <p className="text-sm text-muted-foreground py-2">
@@ -363,6 +325,7 @@ export const PathManagement = () => {
         open={editorOpen}
         onOpenChange={setEditorOpen}
         path={editingPath}
+        mode={editorMode}
         nextOrderRank={nextOrderRank}
         onSave={handleSavePath}
       />
@@ -401,20 +364,31 @@ const PathEditorDialog = ({
   open,
   onOpenChange,
   path,
+  mode,
   nextOrderRank,
   onSave,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   path: AdminLearningPathDto | null;
+  mode: "create" | "edit" | "assign";
   nextOrderRank: number;
-  onSave: (data: { title: string; description: string; level: number; order_rank: number; language: string }) => void;
+  onSave: (data: {
+    title: string;
+    description: string;
+    level: number;
+    order_rank: number;
+    language: string;
+    checkpoint_quest_id?: string | null;
+    creator_email?: string | null;
+  }) => Promise<boolean>;
 }) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [level, setLevel] = useState(1);
   const [orderRank, setOrderRank] = useState(1);
   const [language, setLanguage] = useState<string>("python");
+  const [creatorEmail, setCreatorEmail] = useState("");
   const [checkpointQuest, setCheckpointQuest] = useState<string | null>(null);
   const [allQuests, setAllQuests] = useState<AdminQuestDto[]>([]);
   const [saving, setSaving] = useState(false);
@@ -426,8 +400,8 @@ const PathEditorDialog = ({
       setLevel(path?.level ?? 1);
       setOrderRank(path?.order_rank ?? nextOrderRank);
       setLanguage(path?.language ?? "python");
+      setCreatorEmail(path?.creator_email ?? "");
       setCheckpointQuest(path?.checkpoint_quest_id ?? null);
-      // preload quests for checkpoint selector
       fetchAdminQuests().then((q) => setAllQuests(q.filter((x) => !x.is_deleted))).catch(() => setAllQuests([]));
     }
   }, [open, path, nextOrderRank]);
@@ -436,8 +410,18 @@ const PathEditorDialog = ({
     e.preventDefault();
     setSaving(true);
     try {
-      await onSave({ title, description, level, order_rank: orderRank, language, checkpoint_quest_id: checkpointQuest ?? null });
-      onOpenChange(false);
+      const saved = await onSave({
+        title,
+        description,
+        level,
+        order_rank: orderRank,
+        language,
+        checkpoint_quest_id: checkpointQuest ?? null,
+        creator_email: creatorEmail.trim() || null,
+      });
+      if (saved) {
+        onOpenChange(false);
+      }
     } finally {
       setSaving(false);
     }
@@ -447,9 +431,25 @@ const PathEditorDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{path ? "Edit path" : "Create path"}</DialogTitle>
+          <DialogTitle>
+            {mode === "assign" ? "Assign creator" : path ? "Edit path" : "Create path"}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === "assign" && path && (
+            <div className="rounded-lg border border-border/70 bg-muted/30 p-4 space-y-1">
+              <p className="text-sm font-medium text-foreground">{path.title}</p>
+              <p className="text-xs text-muted-foreground">
+                {path.description}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Level {path.level} · {(path.language ?? "python").toUpperCase()}
+              </p>
+            </div>
+          )}
+
+          {mode !== "assign" && (
+            <>
           <div>
             <label className="text-sm font-medium">Title</label>
             <Input
@@ -513,6 +513,22 @@ const PathEditorDialog = ({
               Quests in a path should match this language. Progression is independent per language.
             </p>
           </div>
+            </>
+          )}
+          <div>
+            <label className="text-sm font-medium">Creator email</label>
+            <Input
+              type="email"
+              value={creatorEmail}
+              onChange={(e) => setCreatorEmail(e.target.value)}
+              placeholder="creator@example.com"
+              className="mt-1"
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              Leave blank to keep the current creator assignment. Enter an email to invite or assign a creator for this learning path.
+            </p>
+          </div>
+          {mode !== "assign" && (
           <div>
             <label className="text-sm font-medium">Checkpoint quest (optional)</label>
             <Select value={checkpointQuest ?? ""} onValueChange={(v) => setCheckpointQuest(v || null)}>
@@ -532,6 +548,7 @@ const PathEditorDialog = ({
             </Select>
             <p className="text-xs text-muted-foreground mt-1">Optional quest that, when solved, unlocks this path.</p>
           </div>
+          )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel

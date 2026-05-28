@@ -14,7 +14,6 @@ import {
 import Header from "@/components/Header";
 import { UserProgressTable } from "@/components/admin/UserProgressTable";
 import { QuestAnalytics } from "@/components/admin/QuestAnalytics";
-import { ContentManagement } from "@/components/admin/ContentManagement";
 import { PathManagement } from "@/components/admin/PathManagement";
 import { fetchAdminStats, type AdminStatsDto } from "@/api/backend";
 
@@ -34,10 +33,38 @@ const AdminDashboard = () => {
 
   const statCards = stats
     ? [
-        { label: 'Total Users', value: stats.total_users.toLocaleString(), icon: Users, color: 'from-blue-500/20 to-cyan-500/20 text-cyan-400 border-cyan-500/30' },
-        { label: 'Quests Completed', value: stats.quests_completed.toLocaleString(), icon: Trophy, color: 'from-amber-500/20 to-yellow-500/20 text-yellow-400 border-yellow-500/30' },
-        { label: 'Total Quests', value: stats.total_quests.toLocaleString(), icon: FileText, color: 'from-emerald-500/20 to-green-500/20 text-green-400 border-green-500/30' },
-        { label: 'Completion Rate', value: `${stats.completion_rate_pct}%`, icon: Target, color: 'from-purple-500/20 to-pink-500/20 text-pink-400 border-pink-500/30' },
+        {
+          label: 'Total Users',
+          value: stats.total_users.toLocaleString(),
+          icon: Users,
+          gradient: 'from-sky-500/20 via-cyan-500/15 to-transparent',
+          accent: 'text-cyan-300',
+          border: 'border-cyan-500/25',
+        },
+        {
+          label: 'Quests Completed',
+          value: stats.quests_completed.toLocaleString(),
+          icon: Trophy,
+          gradient: 'from-amber-500/20 via-orange-500/15 to-transparent',
+          accent: 'text-amber-200',
+          border: 'border-amber-500/25',
+        },
+        {
+          label: 'Total Quests',
+          value: stats.total_quests.toLocaleString(),
+          icon: FileText,
+          gradient: 'from-emerald-500/20 via-teal-500/15 to-transparent',
+          accent: 'text-emerald-200',
+          border: 'border-emerald-500/25',
+        },
+        {
+          label: 'Completion Rate',
+          value: `${stats.completion_rate_pct}%`,
+          icon: Target,
+          gradient: 'from-fuchsia-500/20 via-pink-500/15 to-transparent',
+          accent: 'text-fuchsia-200',
+          border: 'border-fuchsia-500/25',
+        },
       ]
     : [];
 
@@ -79,17 +106,18 @@ const AdminDashboard = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Card className={`relative overflow-hidden border ${stat.color.split(' ').find(c => c.startsWith('border-')) || 'border-border'} bg-card/50 backdrop-blur-xl hover:-translate-y-1 transition-all duration-300`}>
-                    <div className={`absolute inset-0 bg-gradient-to-br ${stat.color.split(' ').filter(c => c.startsWith('from-') || c.startsWith('to-')).join(' ')} opacity-50`} />
+                  <Card className={`relative overflow-hidden ${stat.border} bg-slate-950/60 backdrop-blur-xl shadow-[0_18px_60px_-30px_rgba(15,23,42,0.95)] hover:-translate-y-1 transition-all duration-300`}>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-100`} />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.07),transparent_45%)]" />
                     <CardContent className="p-6 relative z-10">
                       <div className="flex items-center justify-between mb-4">
-                        <div className={`p-3 rounded-xl bg-background/50 backdrop-blur-sm border border-white/5`}>
-                          <stat.icon className={`w-6 h-6 ${stat.color.split(' ').find(c => c.startsWith('text-') && !c.includes('/')) || ''}`} />
+                        <div className="p-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10">
+                          <stat.icon className={`w-6 h-6 ${stat.accent}`} />
                         </div>
                       </div>
                       <div>
-                        <p className="text-3xl font-bold tracking-tight text-white mb-1">{stat.value}</p>
-                        <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
+                        <p className="text-3xl font-bold tracking-tight text-slate-50 mb-1">{stat.value}</p>
+                        <p className="text-sm font-medium text-slate-300">{stat.label}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -100,14 +128,10 @@ const AdminDashboard = () => {
 
           {/* Main Content Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full max-w-2xl grid-cols-4">
+            <TabsList className="grid w-full max-w-2xl grid-cols-3">
               <TabsTrigger value="users" className="gap-2">
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Users</span>
-              </TabsTrigger>
-              <TabsTrigger value="content" className="gap-2">
-                <FileText className="w-4 h-4" />
-                <span className="hidden sm:inline">Quests</span>
               </TabsTrigger>
               <TabsTrigger value="paths" className="gap-2">
                 <BookOpen className="w-4 h-4" />
@@ -132,18 +156,6 @@ const AdminDashboard = () => {
               <QuestAnalytics />
             </TabsContent>
 
-            <TabsContent value="content" className="space-y-4 focus-visible:outline-none">
-              <Card className="bg-card/50 backdrop-blur-xl border-border/50 shadow-xl">
-                <CardContent className="p-6">
-                  <h2 className="text-xl font-semibold mb-6 flex items-center gap-2 text-foreground">
-                    <FileText className="w-5 h-5 text-primary" />
-                    Quest Management
-                  </h2>
-                  <ContentManagement />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
             <TabsContent value="paths" className="space-y-4 focus-visible:outline-none">
               <Card className="bg-card/50 backdrop-blur-xl border-border/50 shadow-xl">
                 <CardContent className="p-6">
@@ -151,6 +163,9 @@ const AdminDashboard = () => {
                     <BookOpen className="w-5 h-5 text-primary" />
                     Learning Paths
                   </h2>
+                  <p className="mb-4 max-w-3xl text-sm text-muted-foreground">
+                    Create and maintain paths here. Quest changes happen only inside a path, and you can invite a creator by email while editing the path details.
+                  </p>
                   <PathManagement />
                 </CardContent>
               </Card>

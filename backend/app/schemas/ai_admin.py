@@ -6,6 +6,7 @@ class AdminQuestAIDraftRequest(BaseModel):
     difficulty: int = Field(1, ge=1, le=3, description="1=beginner, 2=intermediate, 3=advanced")
     bug_type: str = Field(..., min_length=2, max_length=80, description="e.g. off-by-one, wrong key, bad condition")
     extra_instructions: str | None = Field(None, max_length=500)
+    language: str | None = Field(None, max_length=32, description="Quest language; defaults to Python")
 
 
 class AdminQuestAIDraftResponse(BaseModel):

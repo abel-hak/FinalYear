@@ -18,11 +18,13 @@ export function AiQuestGeneratorDialog({
   open,
   onOpenChange,
   defaultDifficulty = 1,
+  language = null,
   onDraft,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultDifficulty?: number;
+  language?: string | null;
   onDraft: (draft: AdminQuestAIDraftResponseDto) => void;
 }) {
   const { toast } = useToast();
@@ -48,6 +50,7 @@ export function AiQuestGeneratorDialog({
         difficulty,
         bug_type: bugType.trim(),
         extra_instructions: extra.trim() ? extra.trim() : null,
+        language,
       });
       onDraft(draft);
       toast({ title: "AI draft generated" });

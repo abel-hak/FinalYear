@@ -161,6 +161,7 @@ export interface AdminQuestAIDraftRequestDto {
   difficulty: number;
   bug_type: string;
   extra_instructions?: string | null;
+  language?: string | null;
 }
 
 export interface AdminQuestAIDraftResponseDto {

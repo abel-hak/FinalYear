@@ -212,6 +212,7 @@ async def generate_admin_quest_draft(
     topic: str,
     difficulty: int,
     bug_type: str,
+    language: str | None = None,
     extra_instructions: str | None = None,
 ) -> dict:
     """
@@ -228,8 +229,9 @@ async def generate_admin_quest_draft(
         raise RuntimeError("AI is temporarily unavailable. Please try again in a few moments.")
 
     level = int(difficulty)
+    fence, lang_human = _language_for_prompt(language)
     system_prompt = (
-        "You are creating debugging quests for a Python learning platform.\n"
+        f"You are creating debugging quests for a {lang_human} learning platform.\n"
         "Return ONLY valid JSON (no markdown, no backticks) with keys:\n"
         "title, description, level, initial_code, solution_code, explanation, expected_output, tags.\n"
         "Constraints:\n"
@@ -246,8 +248,9 @@ async def generate_admin_quest_draft(
         f"Topic: {topic}\n"
         f"Difficulty level (1-3): {level}\n"
         f"Bug type: {bug_type}\n"
+        f"Programming language: {lang_human}\n"
         f"Extra instructions: {extra_instructions or '(none)'}\n"
-        "Make the quest runnable as a single Python script using print()."
+        f"Make the quest runnable as a single {lang_human} program that prints output to stdout."
     )
 
     payload = {
@@ -258,7 +261,6 @@ async def generate_admin_quest_draft(
         ],
         "temperature": 0.3,
         "max_tokens": 700,
-        "response_format": {"type": "json_object"},
     }
 
     headers = {
@@ -358,7 +360,6 @@ async def generate_failure_explanation(
         ],
         "temperature": 0.3,
         "max_tokens": 500,
-        "response_format": {"type": "json_object"},
     }
 
     headers = {

@@ -8,6 +8,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.creator_invitation import CreatorInvitation
 from app.models.learner import Learner
 from app.models.learning_path import LearningPath, LearningPathQuest
 from app.models.quest import Quest
@@ -126,12 +127,32 @@ class AdminRepository:
             .options(
                 selectinload(LearningPath.path_quests),
                 selectinload(LearningPath.checkpoint_quest),
+                selectinload(LearningPath.creator),
             )
             .order_by(LearningPath.level, LearningPath.order_rank)
         )
         return list(result.scalars().all())
 
-    async def create_learning_path(self, *, payload) -> LearningPath:
+    async def list_learning_paths_for_creator(self, creator_user_id) -> list[LearningPath]:
+        result = await self.db.execute(
+            select(LearningPath)
+            .options(
+                selectinload(LearningPath.path_quests),
+                selectinload(LearningPath.checkpoint_quest),
+                selectinload(LearningPath.creator),
+            )
+            .where(LearningPath.creator_user_id == creator_user_id)
+            .order_by(LearningPath.level, LearningPath.order_rank)
+        )
+        return list(result.scalars().all())
+
+    async def count_learning_paths_for_creator(self, creator_user_id) -> int:
+        result = await self.db.execute(
+            select(func.count(LearningPath.id)).where(LearningPath.creator_user_id == creator_user_id)
+        )
+        return int(result.scalar() or 0)
+
+    async def create_learning_path(self, *, payload, creator_user_id=None) -> LearningPath:
         path = LearningPath(
             title=payload.title,
             description=payload.description,
@@ -139,11 +160,12 @@ class AdminRepository:
             order_rank=payload.order_rank,
             language=getattr(payload, "language", None) or "python",
             checkpoint_quest_id=getattr(payload, "checkpoint_quest_id", None),
+            creator_user_id=creator_user_id,
         )
         self.db.add(path)
         await self.db.commit()
         await self.db.refresh(path)
-        return path
+        return await self.get_learning_path_with_quests(path.id) or path
 
     async def get_learning_path_with_quests(self, path_id) -> LearningPath | None:
         result = await self.db.execute(
@@ -151,8 +173,21 @@ class AdminRepository:
             .options(
                 selectinload(LearningPath.path_quests).selectinload(LearningPathQuest.quest),
                 selectinload(LearningPath.checkpoint_quest),
+                selectinload(LearningPath.creator),
             )
             .where(LearningPath.id == path_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def get_learning_path_with_quests_for_creator(self, path_id, creator_user_id) -> LearningPath | None:
+        result = await self.db.execute(
+            select(LearningPath)
+            .options(
+                selectinload(LearningPath.path_quests).selectinload(LearningPathQuest.quest),
+                selectinload(LearningPath.checkpoint_quest),
+                selectinload(LearningPath.creator),
+            )
+            .where(LearningPath.id == path_id, LearningPath.creator_user_id == creator_user_id)
         )
         return result.scalar_one_or_none()
 
@@ -161,7 +196,7 @@ class AdminRepository:
             setattr(path, field, value)
         await self.db.commit()
         await self.db.refresh(path)
-        return path
+        return await self.get_learning_path_with_quests(path.id) or path
 
     async def delete_learning_path(self, *, path: LearningPath) -> None:
         await self.db.delete(path)
@@ -206,9 +241,75 @@ class AdminRepository:
         await self.db.delete(path_quest)
         await self.db.commit()
 
+    async def create_creator_invitation(
+        self,
+        *,
+        path_id,
+        email: str,
+        token_hash: str,
+        expires_at,
+        created_by,
+    ) -> CreatorInvitation:
+        invitation = CreatorInvitation(
+            path_id=path_id,
+            email=email,
+            token_hash=token_hash,
+            expires_at=expires_at,
+            created_by=created_by,
+        )
+        self.db.add(invitation)
+        await self.db.commit()
+        await self.db.refresh(invitation)
+        return invitation
+
+    async def find_active_creator_invitation_by_token_hash(self, token_hash: str) -> CreatorInvitation | None:
+        result = await self.db.execute(
+            select(CreatorInvitation).where(
+                CreatorInvitation.token_hash == token_hash,
+                CreatorInvitation.accepted_at.is_(None),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def accept_creator_invitation(self, *, invitation: CreatorInvitation, user_id) -> CreatorInvitation:
+        invitation.accepted_at = datetime.now(timezone.utc)
+        invitation.accepted_by_user_id = user_id
+        invitation.learning_path.creator_user_id = user_id
+        await self.db.commit()
+        await self.db.refresh(invitation)
+        return invitation
+
     async def get_quest_by_id(self, quest_id) -> Quest | None:
         result = await self.db.execute(select(Quest).where(Quest.id == quest_id))
         return result.scalar_one_or_none()
+
+    async def is_quest_in_creator_paths(self, quest_id, creator_user_id) -> bool:
+        result = await self.db.execute(
+            select(func.count(LearningPathQuest.id))
+            .select_from(LearningPathQuest)
+            .join(LearningPath, LearningPath.id == LearningPathQuest.path_id)
+            .where(
+                LearningPath.creator_user_id == creator_user_id,
+                LearningPathQuest.quest_id == quest_id,
+            )
+        )
+        return int(result.scalar() or 0) > 0
+
+    async def reorder_learning_path_quests(self, *, path_id, items: list[dict]) -> None:
+        # items is a list of dicts with keys: quest_id, order_rank
+        quest_ids = [item["quest_id"] for item in items]
+        result = await self.db.execute(
+            select(LearningPathQuest).where(LearningPathQuest.path_id == path_id, LearningPathQuest.quest_id.in_(quest_ids))
+        )
+        rows = result.scalars().all()
+        row_map = {r.quest_id: r for r in rows}
+        for item in items:
+            rq = row_map.get(item["quest_id"])
+            if rq is None:
+                # skip missing entries
+                continue
+            rq.order_rank = item["order_rank"]
+        await self.db.commit()
 
     async def update_quest(self, *, quest: Quest, updates: dict) -> Quest:
         for field, value in updates.items():

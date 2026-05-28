@@ -2,11 +2,16 @@
 Learning path model - curated sequences of quests for specific goals (e.g. Python basics).
 """
 import uuid
+from typing import TYPE_CHECKING
 from sqlalchemy import String, Integer, Text, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.quest import Quest
+    from app.models.user import User
 
 
 class LearningPath(Base):
@@ -22,6 +27,11 @@ class LearningPath(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     level: Mapped[int] = mapped_column(Integer, nullable=False, default=1)  # 1=Beginner, 2=Intermediate, 3=Advanced
     order_rank: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    creator_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     # Programming language this path teaches; lets quests/paths progress
     # independently per language (e.g. Java level 2 unlocks when Java level 1
     # is done, regardless of Python progress).
@@ -37,6 +47,13 @@ class LearningPath(Base):
     checkpoint_quest: Mapped["Quest | None"] = relationship(
         "Quest",
         foreign_keys=[checkpoint_quest_id],
+        lazy="joined",
+    )
+
+    creator: Mapped["User | None"] = relationship(
+        "User",
+        back_populates="managed_learning_paths",
+        foreign_keys=[creator_user_id],
         lazy="joined",
     )
 

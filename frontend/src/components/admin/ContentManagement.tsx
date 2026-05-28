@@ -143,6 +143,7 @@ export const ContentManagement = () => {
   };
 
   const handleEdit = (quest: AdminQuestDto) => {
+    setAiPrefill(null);
     setEditingQuest(quest);
     setEditorOpen(true);
   };
@@ -328,7 +329,10 @@ export const ContentManagement = () => {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
                           className="gap-2"
-                          onClick={() => handleEdit(quest)}
+                          onSelect={(event) => {
+                            event.preventDefault();
+                            handleEdit(quest);
+                          }}
                         >
                           <Pencil className="w-4 h-4" />
                           Edit

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid } from "recharts";
 import { fetchAdminAnalytics, type AdminAnalyticsDto } from "@/api/backend";
 import { useToast } from "@/components/ui/use-toast";
@@ -67,7 +69,9 @@ export const QuestAnalytics = () => {
       failed: failedPct,
       total,
     };
-  });
+  }).sort((a, b) => a.completed - b.completed);
+
+  const leastCompleteQuest = completionData[0];
 
   const totalDifficulty = analytics.difficulty_distribution.reduce((s, d) => s + d.count, 0);
   const difficultyData = analytics.difficulty_distribution.map((d) => ({
@@ -84,22 +88,54 @@ export const QuestAnalytics = () => {
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
-      {/* Quest Completion Rate */}
-      <Card className="bg-card/50 backdrop-blur-xl border-border/50 shadow-xl transition-all hover:bg-card/60">
-        <CardHeader>
-          <CardTitle className="text-lg">Quest Completion Rate</CardTitle>
+      <Card className="relative overflow-hidden border-border/60 bg-slate-950/65 backdrop-blur-xl shadow-[0_22px_70px_-38px_rgba(2,6,23,0.95)] transition-all hover:-translate-y-0.5 hover:bg-slate-950/75 md:col-span-2">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(56,189,248,0.16),transparent_32%),radial-gradient(circle_at_top_right,rgba(244,63,94,0.11),transparent_28%),linear-gradient(135deg,rgba(15,23,42,0.92),rgba(15,23,42,0.72))]" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-cyan-400/0 via-cyan-400/40 to-rose-400/0" />
+        <CardHeader className="relative z-10 space-y-4 pb-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <CardTitle className="text-xl text-slate-50">Quest Breakdown</CardTitle>
+              <p className="mt-1 max-w-2xl text-sm text-slate-300">
+                Sorted from lowest to highest completion rate for faster triage.
+              </p>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <ChartContainer config={chartConfig} className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={completionData} layout="vertical" margin={{ left: 0, right: 20 }}>
-                <XAxis type="number" domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
-                <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="completed" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="Completed %" />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
+
+        <CardContent className="relative z-10">
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-slate-100">Quest breakdown</p>
+                <p className="text-xs text-slate-300">Sorted from lowest to highest completion rate for faster triage.</p>
+              </div>
+              <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200">{completionData.length} quests</div>
+            </div>
+
+            <ScrollArea className="h-[420px] pr-3">
+              <div className="space-y-3">
+                {completionData.map((quest) => (
+                  <div key={quest.name} className="rounded-xl border border-white/10 bg-slate-950/40 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-50">{quest.name}</p>
+                        <p className="mt-1 text-xs text-slate-300">{quest.completed}/{quest.total} completed</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-semibold text-slate-50">{quest.completed}%</div>
+                        <p className="text-[11px] text-slate-300">{quest.failed}% failed</p>
+                      </div>
+                    </div>
+                    <Progress value={quest.completed} className="mt-3 h-2 bg-white/10" />
+                    <div className="mt-2 flex items-center justify-between text-[11px] text-slate-300">
+                      <span>{quest.total} attempts</span>
+                      <span>{quest.failed} failed</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
         </CardContent>
       </Card>
 

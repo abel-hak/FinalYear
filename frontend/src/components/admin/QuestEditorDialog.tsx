@@ -26,6 +26,7 @@ import {
   type AdminQuestDto,
   type TestCaseDto,
 } from "@/api/backend";
+import { addCreatorQuestToPath } from "@/api/backend";
 import { useToast } from "@/components/ui/use-toast";
 
 interface QuestEditorDialogProps {
@@ -48,6 +49,9 @@ interface QuestEditorDialogProps {
   }> | null;
   suggestedExpectedOutput?: string;
   clearSuggestedExpectedOutput?: () => void;
+  createQuestFn?: (payload: any) => Promise<AdminQuestDto>;
+  updateQuestFn?: (questId: string, payload: any) => Promise<AdminQuestDto>;
+  preselectedPathId?: string | null;
 }
 
 const LANGUAGE_OPTIONS: { value: string; label: string }[] = [
@@ -59,16 +63,20 @@ const LANGUAGE_OPTIONS: { value: string; label: string }[] = [
   { value: "c", label: "C" },
 ];
 
-export function QuestEditorDialog({
-  open,
-  onOpenChange,
-  quest,
-  nextOrderRank,
-  onSaved,
-  prefill = null,
-  suggestedExpectedOutput,
-  clearSuggestedExpectedOutput,
-}: QuestEditorDialogProps) {
+export function QuestEditorDialog(props: QuestEditorDialogProps) {
+  const {
+    open,
+    onOpenChange,
+    quest,
+    nextOrderRank,
+    onSaved,
+    prefill = null,
+    suggestedExpectedOutput,
+    clearSuggestedExpectedOutput,
+    createQuestFn,
+    updateQuestFn,
+    preselectedPathId = null,
+  } = props;
   const { toast } = useToast();
   const isEdit = !!quest;
 
@@ -169,7 +177,8 @@ export function QuestEditorDialog({
         }
       }
       if (isEdit && quest) {
-        await updateAdminQuest(quest.id, {
+        const updater = updateQuestFn ?? updateAdminQuest;
+        await updater(quest.id, {
           title: title.trim(),
           description: description.trim(),
           level,
@@ -182,7 +191,8 @@ export function QuestEditorDialog({
         });
         toast({ title: "Quest updated successfully" });
       } else {
-        const created = await createAdminQuest({
+        const creator = createQuestFn ?? createAdminQuest;
+        const created = await creator({
           title: title.trim(),
           description: description.trim(),
           level,
@@ -193,6 +203,14 @@ export function QuestEditorDialog({
           explanation: explanation.trim(),
           tags: parsedTags(),
         });
+        // If a path was preselected (creator flow), attach the created quest to it.
+        if (preselectedPathId) {
+          try {
+            await addCreatorQuestToPath(preselectedPathId, created.id);
+          } catch (err) {
+            toast({ title: "Quest created but failed to assign to path", description: err instanceof Error ? err.message : "Unknown error", variant: "destructive" });
+          }
+        }
         // If expected output is filled, create first test case for the new quest.
         if (newExpectedOutput.trim()) {
           try {
