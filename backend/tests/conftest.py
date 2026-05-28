@@ -18,6 +18,53 @@ if BACKEND_ROOT not in sys.path:
 from app.main import app  # type: ignore  # noqa: E402
 from app.db.session import get_db
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+import httpx
+from types import SimpleNamespace
+
+
+@pytest_asyncio.fixture(autouse=True)
+def _mock_judge0_requests(monkeypatch):
+    """Prevent tests from calling the real Judge0 service by mocking HTTPX.
+
+    The mock only intercepts `httpx.AsyncClient.post` when the client has a
+    `base_url` containing "judge0" or when the path is "/submissions". Other
+    uses of `AsyncClient.post` are delegated to the original method.
+    """
+    original_post = httpx.AsyncClient.post
+
+    async def _fake_post(self, url, *args, **kwargs):
+        base = getattr(self, "base_url", "") or ""
+        path = str(url or "")
+        if "judge0" in str(base).lower() or path.endswith("/submissions") or path == "/submissions":
+            # Return a fake successful Judge0 synchronous response with base64 fields
+            class FakeResp:
+                def __init__(self):
+                    self.status_code = 200
+
+                def raise_for_status(self):
+                    return None
+
+                def json(self):
+                    # Minimal accepted payload with base64-encoded stdout for our simple tests
+                    import base64
+
+                    return {
+                        "stdout": base64.b64encode(b"10\n").decode("ascii"),
+                        "stderr": None,
+                        "compile_output": None,
+                        "message": None,
+                        "status": {"id": 3, "description": "Accepted"},
+                        "time": "0.01",
+                        "memory": 1024,
+                        "exit_code": 0,
+                    }
+
+            return FakeResp()
+
+        # Fallback to the real implementation for other requests
+        return await original_post(self, url, *args, **kwargs)
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", _fake_post)
 
 
 def _load_test_env_file() -> None:
@@ -42,6 +89,8 @@ _load_test_env_file()
 os.environ["JUDGE0_BASE_URL"] = ""
 os.environ["USE_LOCAL_SANDBOX"] = "true"
 os.environ["EMAIL_VERIFICATION_REQUIRED"] = "false"
+# Allow tests that submit many times to run without hitting rate limits by default.
+os.environ["SUBMISSION_RATE_LIMIT_PER_MINUTE"] = os.environ.get("SUBMISSION_RATE_LIMIT_PER_MINUTE", "10000")
 
 
 def _validate_db_name(name: str) -> None:

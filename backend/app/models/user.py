@@ -43,3 +43,8 @@ class User(Base):
 
     learner: Mapped["Learner | None"] = relationship("Learner", back_populates="user", uselist=False)
     admin: Mapped["Admin | None"] = relationship("Admin", back_populates="user", uselist=False)
+    managed_learning_paths: Mapped[list["LearningPath"]] = relationship(
+        "LearningPath",
+        back_populates="creator",
+        foreign_keys="LearningPath.creator_user_id",
+    )

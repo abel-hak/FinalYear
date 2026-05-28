@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { login, getRole } from "@/api/backend";
+import { login, getRole, getCreatorPathCount } from "@/api/backend";
 import { Code2, LogIn, Eye, EyeOff } from "lucide-react";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 
@@ -21,9 +21,10 @@ const Login = () => {
     try {
       await login(username, password);
       const role = getRole();
-      navigate(role === "admin" ? "/admin" : "/quests");
-    } catch (e: any) {
-      const message = e.message ?? "Login failed";
+      const creatorPathCount = getCreatorPathCount();
+      navigate(role === "admin" ? "/admin" : creatorPathCount > 0 ? "/creator" : "/quests");
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Login failed";
       setError(message);
     } finally {
       setLoading(false);

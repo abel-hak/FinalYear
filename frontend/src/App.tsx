@@ -10,6 +10,8 @@ import QuestPage from "./pages/QuestPage";
 import Achievements from "./pages/Achievements";
 import FAQ from "./pages/FAQ";
 import AdminDashboard from "./pages/AdminDashboard";
+import CreatorDashboard from "./pages/CreatorDashboard";
+import CreatorInviteAccept from "./pages/CreatorInviteAccept";
 import Leaderboard from "./pages/Leaderboard";
 import LearningPaths from "./pages/LearningPaths";
 import LearningPathDetail from "./pages/LearningPathDetail";
@@ -76,6 +78,11 @@ const App = () => {
             path="/admin"
             element={token ? <AdminDashboard /> : <Navigate to="/login" replace />}
           />
+          <Route
+            path="/creator"
+            element={token ? <CreatorDashboard /> : <Navigate to="/login" replace />}
+          />
+          <Route path="/creator/invite" element={<CreatorInviteAccept />} />
           <Route path="/faq" element={<FAQ />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

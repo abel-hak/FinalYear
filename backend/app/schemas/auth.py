@@ -41,6 +41,7 @@ class UserLogin(BaseModel):
 class UserPublic(UserBase):
     id: UUID4
     role: str
+    creator_path_count: int = 0
 
     class Config:
         from_attributes = True

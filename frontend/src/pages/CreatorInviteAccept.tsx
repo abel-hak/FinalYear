@@ -1,55 +1,46 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { exchangeGoogleHandoff, getRole, getCreatorPathCount } from "@/api/backend";
-import { Code2, Loader2, TriangleAlert } from "lucide-react";
+import { acceptCreatorInvitation } from "@/api/backend";
+import { Code2, Loader2, TriangleAlert, BadgeCheck } from "lucide-react";
 
-const GoogleOAuthCallback = () => {
+const CreatorInviteAccept = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accepted, setAccepted] = useState(false);
 
   useEffect(() => {
-    const code = searchParams.get("code");
-    const callbackError = searchParams.get("error");
-
-    if (callbackError) {
-      setError(callbackError);
-      setLoading(false);
-      return;
-    }
-
-    if (!code) {
-      setError("Missing Google sign-in handoff code.");
+    const token = searchParams.get("token");
+    if (!token) {
+      setError("Missing invitation token.");
       setLoading(false);
       return;
     }
 
     let cancelled = false;
 
-    async function completeGoogleSignIn() {
+    async function completeAcceptance() {
       try {
-        await exchangeGoogleHandoff(code);
-        if (cancelled) {
-          return;
-        }
-        const role = getRole();
-        const creatorPathCount = getCreatorPathCount();
-        navigate(role === "admin" ? "/admin" : creatorPathCount > 0 ? "/creator" : "/quests", { replace: true });
-      } catch (e) {
+        await acceptCreatorInvitation(token);
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Google sign-in failed");
+          setAccepted(true);
+          setLoading(false);
+        }
+      } catch (e: any) {
+        if (!cancelled) {
+          setError(e.message ?? "Invitation acceptance failed");
           setLoading(false);
         }
       }
     }
 
-    void completeGoogleSignIn();
+    void completeAcceptance();
 
     return () => {
       cancelled = true;
     };
-  }, [navigate, searchParams]);
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden">
@@ -67,21 +58,33 @@ const GoogleOAuthCallback = () => {
           {loading ? (
             <>
               <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-primary" />
-              <h1 className="text-xl font-semibold text-foreground">Completing Google sign-in</h1>
-              <p className="mt-2 text-sm text-muted-foreground">Finishing account setup securely on the server.</p>
+              <h1 className="text-xl font-semibold text-foreground">Accepting invitation</h1>
+              <p className="mt-2 text-sm text-muted-foreground">We’re connecting this path to your account.</p>
+            </>
+          ) : accepted ? (
+            <>
+              <BadgeCheck className="mx-auto mb-4 h-8 w-8 text-emerald-400" />
+              <h1 className="text-xl font-semibold text-foreground">Invitation accepted</h1>
+              <p className="mt-2 text-sm text-muted-foreground">You can now manage your assigned learning paths.</p>
+              <button
+                className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground"
+                onClick={() => navigate("/creator", { replace: true })}
+              >
+                Go to creator workspace
+              </button>
             </>
           ) : (
             <>
               <TriangleAlert className="mx-auto mb-4 h-8 w-8 text-amber-400" />
-              <h1 className="text-xl font-semibold text-foreground">Google sign-in could not be completed</h1>
+              <h1 className="text-xl font-semibold text-foreground">Invitation could not be accepted</h1>
               <p className="mt-2 text-sm text-muted-foreground">{error}</p>
               <div className="mt-6 flex items-center justify-center gap-3">
                 <Link to="/login" className="text-sm font-medium text-primary hover:text-primary/80">
                   Back to login
                 </Link>
                 <span className="text-muted-foreground/40">|</span>
-                <Link to="/register" className="text-sm font-medium text-primary hover:text-primary/80">
-                  Back to register
+                <Link to="/" className="text-sm font-medium text-primary hover:text-primary/80">
+                  Home
                 </Link>
               </div>
             </>
@@ -92,4 +95,4 @@ const GoogleOAuthCallback = () => {
   );
 };
 
-export default GoogleOAuthCallback;
+export default CreatorInviteAccept;

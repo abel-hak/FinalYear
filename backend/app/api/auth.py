@@ -49,6 +49,7 @@ from app.services.auth_service import (
     AuthVerificationCodeInvalidError,
     AuthVerificationExpiredError,
 )
+from app.repositories.admin_repository import AdminRepository
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -230,9 +231,11 @@ async def google_exchange(
 
 
 @router.get("/me", response_model=UserPublic)
-async def read_current_user(current_user: User = Depends(get_current_user)) -> User:
+async def read_current_user(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> UserPublic:
     """Return the currently authenticated user's public profile."""
-    return current_user
+    profile = UserPublic.model_validate(current_user)
+    profile.creator_path_count = await AdminRepository(db).count_learning_paths_for_creator(current_user.id)
+    return profile
 
 
 @router.post("/password-reset/request", response_model=PasswordResetRequestResponse)

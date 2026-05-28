@@ -2,6 +2,7 @@ const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 const TOKEN_KEY = "codequest_access_token";
 const ROLE_KEY = "codequest_role";
+const CREATOR_PATH_COUNT_KEY = "codequest_creator_path_count";
 const VERIFICATION_SESSION_KEY = "codequest_pending_verification";
 
 export type QuestStatus = "completed" | "current" | "locked";
@@ -246,6 +247,7 @@ export interface UserPublicDto {
   username: string;
   email: string;
   role: "learner" | "admin";
+  creator_path_count?: number;
 }
 
 export interface RegistrationResponseDto {
@@ -315,8 +317,8 @@ async function finalizeAuth(accessToken: string): Promise<void> {
   if (!meRes.ok) {
     throw new Error("Failed to fetch current user after login");
   }
-  const me = (await meRes.json()) as { role: "learner" | "admin" };
-  setAuth(accessToken, me.role);
+  const me = (await meRes.json()) as { role: "learner" | "admin"; creator_path_count?: number };
+  setAuth(accessToken, me.role, me.creator_path_count ?? 0);
 }
 
 export async function exchangeGoogleHandoff(code: string): Promise<void> {
@@ -367,10 +369,11 @@ export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
-export function setAuth(token: string, role: "learner" | "admin"): void {
+export function setAuth(token: string, role: "learner" | "admin", creatorPathCount = 0): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(ROLE_KEY, role);
+  localStorage.setItem(CREATOR_PATH_COUNT_KEY, String(creatorPathCount));
   window.dispatchEvent(new Event("auth-change"));
 }
 
@@ -378,6 +381,7 @@ export function clearAuth(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(ROLE_KEY);
+  localStorage.removeItem(CREATOR_PATH_COUNT_KEY);
   window.dispatchEvent(new Event("auth-change"));
 }
 
@@ -385,6 +389,13 @@ export function getRole(): "learner" | "admin" | null {
   if (typeof window === "undefined") return null;
   const value = localStorage.getItem(ROLE_KEY);
   return value === "learner" || value === "admin" ? value : null;
+}
+
+export function getCreatorPathCount(): number {
+  if (typeof window === "undefined") return 0;
+  const raw = localStorage.getItem(CREATOR_PATH_COUNT_KEY);
+  const parsed = raw ? Number(raw) : 0;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
 export async function login(username: string, password: string): Promise<void> {
@@ -417,6 +428,24 @@ export async function googleLogin(credential: string): Promise<void> {
   }
   const data = (await res.json()) as { access_token: string; token_type: string };
   await finalizeAuth(data.access_token);
+}
+
+export async function fetchQuests(): Promise<QuestSummaryDto[]> {
+  const token = getToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+  const res = await fetch(`${API_BASE}/api/v1/quests`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    throw new Error(`Failed to load quests: ${res.status}`);
+  }
+  return (await res.json()) as QuestSummaryDto[];
 }
 
 export async function register(params: {
@@ -792,6 +821,35 @@ export async function generateAdminQuestDraft(
   return (await res.json()) as AdminQuestAIDraftResponseDto;
 }
 
+export async function generateCreatorQuestDraft(
+  payload: AdminQuestAIDraftRequestDto
+): Promise<AdminQuestAIDraftResponseDto> {
+  const token = getToken();
+  if (!token) {
+    throw new Error("Not authenticated");
+  }
+  const res = await fetch(`${API_BASE}/api/v1/creator/quests/ai-draft`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    if (res.status === 503) {
+      throw new Error(body.detail || `AI draft failed (${res.status})`);
+    }
+    throw new Error(body.detail || `AI draft failed (${res.status})`);
+  }
+  return (await res.json()) as AdminQuestAIDraftResponseDto;
+}
+
 export async function updateAdminQuest(
   questId: string,
   payload: Partial<{
@@ -935,6 +993,8 @@ export interface AdminLearningPathDto {
   language?: string;
   quest_count: number;
   checkpoint_quest_id?: string | null;
+  creator_user_id?: string | null;
+  creator_email?: string | null;
 }
 
 export interface AdminPathQuestDto {
@@ -956,6 +1016,7 @@ export async function createAdminLearningPath(payload: {
   order_rank: number;
   language?: string;
   checkpoint_quest_id?: string | null;
+  creator_email?: string | null;
 }): Promise<AdminLearningPathDto> {
   const token = getToken();
   if (!token) throw new Error("Not authenticated");
@@ -976,7 +1037,7 @@ export async function createAdminLearningPath(payload: {
 
 export async function updateAdminLearningPath(
   pathId: string,
-  payload: Partial<{ title: string; description: string; level: number; order_rank: number; language: string; checkpoint_quest_id?: string | null }>
+  payload: Partial<{ title: string; description: string; level: number; order_rank: number; language: string; checkpoint_quest_id?: string | null; creator_email?: string | null }>
 ): Promise<AdminLearningPathDto> {
   const token = getToken();
   if (!token) throw new Error("Not authenticated");
@@ -1041,6 +1102,214 @@ export async function removeQuestFromPath(pathId: string, questId: string): Prom
     const body = await res.json().catch(() => ({}));
     throw new Error(body.detail || `Failed to remove quest (${res.status})`);
   }
+}
+
+export async function fetchCreatorLearningPaths(): Promise<AdminLearningPathDto[]> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(`${API_BASE}/api/v1/creator/learning-paths`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    throw new Error(`Failed to load creator paths (${res.status})`);
+  }
+  return (await res.json()) as AdminLearningPathDto[];
+}
+
+export async function fetchCreatorPathQuests(pathId: string): Promise<AdminPathQuestDto[]> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(`${API_BASE}/api/v1/creator/learning-paths/${pathId}/quests`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    throw new Error(`Failed to load creator path quests (${res.status})`);
+  }
+  return (await res.json()) as AdminPathQuestDto[];
+}
+
+export async function fetchCreatorQuestDetail(questId: string): Promise<AdminQuestDto> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(`${API_BASE}/api/v1/creator/quests/${questId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.detail || `Failed to load quest (${res.status})`);
+  }
+  return (await res.json()) as AdminQuestDto;
+}
+
+export async function addCreatorQuestToPath(pathId: string, questId: string, orderRank?: number): Promise<AdminPathQuestDto> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(`${API_BASE}/api/v1/creator/learning-paths/${pathId}/quests`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ quest_id: questId, order_rank: orderRank ?? null }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    throw new Error(body.detail || `Failed to add quest (${res.status})`);
+  }
+  return (await res.json()) as AdminPathQuestDto;
+}
+
+export async function createCreatorQuest(payload: {
+  title: string;
+  description: string;
+  level: number;
+  order_rank: number;
+  initial_code: string;
+  solution_code: string;
+  explanation: string;
+  tags?: string[];
+  language?: string;
+  xp_reward?: number;
+}): Promise<AdminQuestDto> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(`${API_BASE}/api/v1/creator/quests`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    throw new Error(body.detail || `Failed to create quest (${res.status})`);
+  }
+  return (await res.json()) as AdminQuestDto;
+}
+
+export async function updateCreatorQuest(
+  questId: string,
+  payload: Partial<{
+    title: string;
+    description: string;
+    level: number;
+    order_rank: number;
+    initial_code: string;
+    solution_code: string;
+    explanation: string;
+    tags: string[];
+    language: string;
+    xp_reward: number;
+  }>
+): Promise<AdminQuestDto> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(`${API_BASE}/api/v1/creator/quests/${questId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    throw new Error(body.detail || `Failed to update quest (${res.status})`);
+  }
+  return (await res.json()) as AdminQuestDto;
+}
+
+export async function reorderCreatorPathQuests(pathId: string, items: { quest_id: string; order_rank: number }[]): Promise<void> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(`${API_BASE}/api/v1/creator/learning-paths/${pathId}/quests/reorder`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ items }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    throw new Error(body.detail || `Failed to reorder path quests (${res.status})`);
+  }
+}
+
+export async function removeCreatorQuestFromPath(pathId: string, questId: string): Promise<void> {
+  const token = getToken();
+  if (!token) throw new Error("Not authenticated");
+  const res = await fetch(`${API_BASE}/api/v1/creator/learning-paths/${pathId}/quests/${questId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    throw new Error(body.detail || `Failed to remove quest (${res.status})`);
+  }
+}
+
+export async function acceptCreatorInvitation(token: string): Promise<AdminLearningPathDto> {
+  const tokenValue = getToken();
+  if (!tokenValue) throw new Error("Not authenticated");
+  const res = await fetch(`${API_BASE}/api/v1/creator/invitations/accept`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${tokenValue}`,
+    },
+    body: JSON.stringify({ token }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error("Unauthorized");
+    }
+    throw new Error(body.detail || `Failed to accept invitation (${res.status})`);
+  }
+  const updated = (await res.json()) as AdminLearningPathDto;
+  const meRes = await fetch(`${API_BASE}/api/v1/auth/me`, {
+    headers: { Authorization: `Bearer ${tokenValue}` },
+  });
+  if (meRes.ok) {
+    const me = (await meRes.json()) as { role: "learner" | "admin"; creator_path_count?: number };
+    setAuth(tokenValue, me.role, me.creator_path_count ?? 0);
+  }
+  return updated;
 }
 
 export async function createAdminQuest(payload: {
@@ -1110,7 +1379,7 @@ export async function requestAiHint(params: {
     }),
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({} as any));
+    const body = await res.json().catch(() => ({} as { detail?: string }));
     throw new Error(body.detail || `AI hint failed (${res.status})`);
   }
   return (await res.json()) as AiHintResponseDto;

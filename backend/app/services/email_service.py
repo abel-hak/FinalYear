@@ -46,6 +46,26 @@ class SmtpEmailService:
         )
         await asyncio.to_thread(self._send, to_email, subject, body)
 
+    async def send_creator_invitation_email(
+        self,
+        *,
+        to_email: str,
+        username: str | None,
+        accept_url: str,
+        path_title: str,
+        expires_minutes: int,
+    ) -> None:
+        subject = f"You have been invited to manage {path_title}"
+        greeting = f"Hi {username},\n\n" if username else "Hi,\n\n"
+        body = (
+            greeting
+            + f"You have been invited to manage the learning path \"{path_title}\" in CodeQuest.\n\n"
+            + f"Accept the invitation here: {accept_url}\n\n"
+            + f"This link expires in {expires_minutes} minutes.\n\n"
+            + "If you did not expect this invitation, you can ignore this email."
+        )
+        await asyncio.to_thread(self._send, to_email, subject, body)
+
     def _send(self, to_email: str, subject: str, body: str) -> None:
         if not self.settings.smtp_host:
             raise EmailDeliveryError("SMTP is not configured")

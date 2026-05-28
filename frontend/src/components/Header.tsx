@@ -16,7 +16,7 @@ import {
   BookOpen,
   Flame,
 } from "lucide-react";
-import { getToken, getRole, clearAuth } from "@/api/backend";
+import { getToken, getRole, clearAuth, getCreatorPathCount } from "@/api/backend";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -34,20 +34,32 @@ const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [role, setRole] = useState<"learner" | "admin" | null>(null);
+  const [creatorPathCount, setCreatorPathCount] = useState(0);
 
   useEffect(() => {
-    const token = getToken();
-    if (!token) {
-      setRole(null);
-      return;
-    }
-    setRole(getRole());
+    const syncAuthState = () => {
+      const token = getToken();
+      if (!token) {
+        setRole(null);
+        setCreatorPathCount(0);
+        return;
+      }
+      setRole(getRole());
+      setCreatorPathCount(getCreatorPathCount());
+    };
+
+    syncAuthState();
+    window.addEventListener("auth-change", syncAuthState);
+    return () => window.removeEventListener("auth-change", syncAuthState);
   }, [location.pathname]);
 
   const navLinks = [
     { to: "/", label: "Home", icon: Code2 },
     ...(role === "admin"
       ? [{ to: "/admin", label: "Admin", icon: LayoutDashboard }]
+      : []),
+    ...(creatorPathCount > 0
+      ? [{ to: "/creator", label: "Manage", icon: BookOpen }]
       : []),
     { to: "/quests", label: "Quests", icon: Map },
     { to: "/learning-paths", label: "Paths", icon: BookOpen },
@@ -131,6 +143,9 @@ const Header: React.FC = () => {
               <DropdownMenuLabel>
                 {role ? `Signed in as ${role}` : "Not signed in"}
               </DropdownMenuLabel>
+              {creatorPathCount > 0 && (
+                <DropdownMenuItem onClick={() => navigate("/creator")}>Manage paths</DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               {role ? (
                 <DropdownMenuItem
@@ -217,6 +232,19 @@ const Header: React.FC = () => {
             </div>
 
             <div className="pt-4 border-t border-border">
+              {creatorPathCount > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start mb-2"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate("/creator");
+                  }}
+                >
+                  Manage paths
+                </Button>
+              )}
               {role ? (
                 <Button
                   variant="outline"
