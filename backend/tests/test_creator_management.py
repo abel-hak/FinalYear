@@ -135,6 +135,78 @@ async def test_admin_invites_creator_and_creator_accepts_invitation(client: Asyn
 
 
 @pytest.mark.asyncio
+async def test_admin_reinvites_pending_creator_path_replaces_invitation(client: AsyncClient) -> None:
+    admin_token = await _admin_token(client)
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    captured_accept_urls: list[str] = []
+
+    async def fake_send_creator_invitation_email(*args, **kwargs) -> None:
+        captured_accept_urls.append(kwargs["accept_url"])
+
+    with patch(
+        "app.services.email_service.SmtpEmailService.send_creator_invitation_email",
+        new_callable=AsyncMock,
+    ) as mock_send:
+        mock_send.side_effect = fake_send_creator_invitation_email
+
+        create_resp = await client.post(
+            "/api/v1/admin/learning-paths",
+            json={
+                "title": "Reinvite Pending Path",
+                "description": "Path used to verify creator invite replacement.",
+                "level": 1,
+                "order_rank": 883,
+            },
+            headers=admin_headers,
+        )
+        assert create_resp.status_code == 201, create_resp.text
+        path_id = create_resp.json()["id"]
+
+        first_update_resp = await client.put(
+            f"/api/v1/admin/learning-paths/{path_id}",
+            json={"creator_email": "learner@codequest.dev"},
+            headers=admin_headers,
+        )
+        assert first_update_resp.status_code == 200, first_update_resp.text
+
+        second_update_resp = await client.put(
+            f"/api/v1/admin/learning-paths/{path_id}",
+            json={"creator_email": "learner@codequest.dev"},
+            headers=admin_headers,
+        )
+        assert second_update_resp.status_code == 200, second_update_resp.text
+
+    assert len(captured_accept_urls) == 2
+    first_token = parse_qs(urlparse(captured_accept_urls[0]).query)["token"][0]
+    second_token = parse_qs(urlparse(captured_accept_urls[1]).query)["token"][0]
+    assert first_token != second_token
+
+    learner_login = await client.post(
+        "/api/v1/auth/login",
+        data={"username": "learner1", "password": "learner123"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert learner_login.status_code == 200, learner_login.text
+    learner_token = learner_login.json()["access_token"]
+    learner_headers = {"Authorization": f"Bearer {learner_token}"}
+
+    old_accept_resp = await client.post(
+        "/api/v1/creator/invitations/accept",
+        json={"token": first_token},
+        headers=learner_headers,
+    )
+    assert old_accept_resp.status_code == 404, old_accept_resp.text
+
+    new_accept_resp = await client.post(
+        "/api/v1/creator/invitations/accept",
+        json={"token": second_token},
+        headers=learner_headers,
+    )
+    assert new_accept_resp.status_code == 200, new_accept_resp.text
+
+
+@pytest.mark.asyncio
 async def test_creator_can_edit_quest_in_assigned_path(client: AsyncClient) -> None:
     admin_token = await _admin_token(client)
     admin_headers = {"Authorization": f"Bearer {admin_token}"}

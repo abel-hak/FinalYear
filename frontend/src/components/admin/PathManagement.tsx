@@ -525,7 +525,7 @@ const PathEditorDialog = ({
               className="mt-1"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Leave blank to keep the current creator assignment. Enter an email to invite or assign a creator for this learning path.
+              Leave blank to keep the current creator assignment. Enter an email to invite or replace the pending creator invite for this learning path.
             </p>
           </div>
           {mode !== "assign" && (
