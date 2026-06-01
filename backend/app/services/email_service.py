@@ -1,20 +1,21 @@
-"""SMTP email delivery for auth flows."""
+"""Resend email delivery for auth flows."""
 
 from __future__ import annotations
 
 import asyncio
-import smtplib
-from email.message import EmailMessage
+import html
+
+import resend
 
 from app.config import get_settings
 
 
 class EmailDeliveryError(RuntimeError):
-    """Raised when SMTP delivery cannot be completed."""
+    """Raised when email delivery cannot be completed."""
 
 
-class SmtpEmailService:
-    """Small SMTP-backed email service."""
+class ResendEmailService:
+    """Small Resend-backed email service."""
 
     def __init__(self) -> None:
         self.settings = get_settings()
@@ -67,21 +68,29 @@ class SmtpEmailService:
         await asyncio.to_thread(self._send, to_email, subject, body)
 
     def _send(self, to_email: str, subject: str, body: str) -> None:
-        if not self.settings.smtp_host:
-            raise EmailDeliveryError("SMTP is not configured")
-
-        message = EmailMessage()
-        message["From"] = self.settings.smtp_from_email
-        message["To"] = to_email
-        message["Subject"] = subject
-        message.set_content(body)
+        if not self.settings.resend_api_key:
+            raise EmailDeliveryError("Resend is not configured")
+        if not self.settings.resend_from_email:
+            raise EmailDeliveryError("Resend sender is not configured")
 
         try:
-            with smtplib.SMTP(self.settings.smtp_host, self.settings.smtp_port, timeout=self.settings.smtp_timeout_seconds) as smtp:
-                if self.settings.smtp_use_tls:
-                    smtp.starttls()
-                if self.settings.smtp_user:
-                    smtp.login(self.settings.smtp_user, self.settings.smtp_password or "")
-                smtp.send_message(message)
-        except Exception as exc:  # pragma: no cover - defensive SMTP wrapper
+            resend.api_key = self.settings.resend_api_key
+            resend.Emails.send(
+                {
+                    "from": self.settings.resend_from_email,
+                    "to": [to_email],
+                    "subject": subject,
+                    "text": body,
+                    "html": self._text_to_html(body),
+                }
+            )
+        except Exception as exc:  # pragma: no cover - defensive provider wrapper
             raise EmailDeliveryError(str(exc)) from exc
+
+    @staticmethod
+    def _text_to_html(body: str) -> str:
+        paragraphs = [f"<p>{html.escape(chunk).replace(chr(10), '<br>')}</p>" for chunk in body.split("\n\n")]
+        return "".join(paragraphs)
+
+
+SmtpEmailService = ResendEmailService

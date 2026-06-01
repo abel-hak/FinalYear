@@ -94,6 +94,9 @@ cp .env.example .env
 # Optional auth hardening:
 #   JWT_SECRET_KEY=your-secret-key-min-32-chars
 #   JWT_ALGORITHM=HS256
+# Optional email delivery (required for registration verification, password reset, and creator invites):
+#   RESEND_API_KEY=...
+#   RESEND_FROM_EMAIL=CodeQuest <onboarding@resend.dev>
 
 alembic upgrade head
 python -m scripts.seed
