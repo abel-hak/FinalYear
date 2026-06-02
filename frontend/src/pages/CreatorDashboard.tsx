@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Loader2, GripVertical, BookOpen, Edit3, ArrowUp, ArrowDown } from "lucide-react";
 import { QuestEditorDialog } from "@/components/admin/QuestEditorDialog";
 import { AiQuestGeneratorDialog } from "@/components/admin/AiQuestGeneratorDialog";
+import { SHOW_AI_QUEST_DRAFT } from "@/lib/featureFlags";
 import { createCreatorQuest, updateCreatorQuest, reorderCreatorPathQuests, fetchCreatorQuestDetail } from "@/api/backend";
 import { motion } from "framer-motion";
 import {
@@ -159,17 +160,19 @@ const CreatorDashboard = () => {
                             <p className="text-sm text-muted-foreground line-clamp-1">{path.description}</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                setPreselectedPathId(path.id);
-                                setAiDraftLanguage(path.language ?? "python");
-                                setAiDraftOpen(true);
-                              }}
-                            >
-                              <Plus className="mr-2 h-4 w-4" />
-                              AI Draft
-                            </Button>
+                            {SHOW_AI_QUEST_DRAFT ? (
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  setPreselectedPathId(path.id);
+                                  setAiDraftLanguage(path.language ?? "python");
+                                  setAiDraftOpen(true);
+                                }}
+                              >
+                                <Plus className="mr-2 h-4 w-4" />
+                                AI Draft
+                              </Button>
+                            ) : null}
                             <Button variant="ghost" onClick={() => { setEditingQuest(null); setPreselectedPathId(path.id); setEditorOpen(true); }}>
                               <Plus className="mr-2 h-4 w-4" />
                               Create Quest
@@ -284,26 +287,28 @@ const CreatorDashboard = () => {
         preselectedPathId={preselectedPathId}
       />
 
-      <AiQuestGeneratorDialog
-        open={aiDraftOpen}
-        onOpenChange={setAiDraftOpen}
-        language={aiDraftLanguage}
-        generateDraft={generateCreatorQuestDraft}
-        onDraft={(draft) => {
-          setDraftPrefill({
-            title: draft.title,
-            description: draft.description,
-            level: draft.level,
-            initial_code: draft.initial_code,
-            solution_code: draft.solution_code,
-            explanation: draft.explanation,
-            tags: draft.tags,
-            expected_output: draft.expected_output,
-          });
-          setEditingQuest(null);
-          setEditorOpen(true);
-        }}
-      />
+      {SHOW_AI_QUEST_DRAFT ? (
+        <AiQuestGeneratorDialog
+          open={aiDraftOpen}
+          onOpenChange={setAiDraftOpen}
+          language={aiDraftLanguage}
+          generateDraft={generateCreatorQuestDraft}
+          onDraft={(draft) => {
+            setDraftPrefill({
+              title: draft.title,
+              description: draft.description,
+              level: draft.level,
+              initial_code: draft.initial_code,
+              solution_code: draft.solution_code,
+              explanation: draft.explanation,
+              tags: draft.tags,
+              expected_output: draft.expected_output,
+            });
+            setEditingQuest(null);
+            setEditorOpen(true);
+          }}
+        />
+      ) : null}
     </div>
   );
 };

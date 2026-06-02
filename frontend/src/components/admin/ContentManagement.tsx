@@ -40,6 +40,7 @@ import {
 } from "@/api/backend";
 import { QuestEditorDialog } from "./QuestEditorDialog";
 import { AiQuestGeneratorDialog } from "./AiQuestGeneratorDialog";
+import { SHOW_AI_QUEST_DRAFT } from "@/lib/featureFlags";
 import { useToast } from "@/components/ui/use-toast";
 
 const levelLabels: Record<number, string> = {
@@ -268,10 +269,12 @@ export const ContentManagement = () => {
             {qualityLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             Quality Check
           </Button>
-          <Button variant="outline" className="gap-2" onClick={() => setAiOpen(true)}>
-            <Sparkles className="w-4 h-4" />
-            AI Generate
-          </Button>
+          {SHOW_AI_QUEST_DRAFT ? (
+            <Button variant="outline" className="gap-2" onClick={() => setAiOpen(true)}>
+              <Sparkles className="w-4 h-4" />
+              AI Generate
+            </Button>
+          ) : null}
           <Button className="gap-2" onClick={handleCreate}>
             <Plus className="w-4 h-4" />
             Add Quest
@@ -381,11 +384,13 @@ export const ContentManagement = () => {
         clearSuggestedExpectedOutput={() => setAiPrefill(null)}
       />
 
-      <AiQuestGeneratorDialog
-        open={aiOpen}
-        onOpenChange={setAiOpen}
-        onDraft={handleAIDraft as any}
-      />
+      {SHOW_AI_QUEST_DRAFT ? (
+        <AiQuestGeneratorDialog
+          open={aiOpen}
+          onOpenChange={setAiOpen}
+          onDraft={handleAIDraft as any}
+        />
+      ) : null}
 
       <AlertDialog
         open={!!deleteTarget}
