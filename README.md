@@ -170,6 +170,8 @@ FinalYear/
 │   ├── scripts/              # Seed, reset, backfill, maintenance utilities
 │   └── tests/                # pytest test suite
 │
+├── docs                      # All the SRS useful docs
+    ├── testcases             # All the tests that has been added to Testing in SRS Doc
 ├── frontend/                 # React SPA (Vite + shadcn/ui)
 │   └── src/
 │       ├── api/backend.ts    # Type-safe API wrapper + auth helpers
@@ -266,3 +268,4 @@ Full interactive docs at `/docs` on the backend.
 - `docs/SCHEMA.md` – Database schema, relations, indexes.
 - `docs/GAP_ANALYSIS.md` – How the implementation maps to the project specification.
 - `docs/TESTING.md` – Manual + automated testing strategy.
+- `docs/testcases/<Tests>` - Detail description of every test case
