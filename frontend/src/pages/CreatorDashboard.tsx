@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Loader2, GripVertical, BookOpen, Edit3, ArrowUp, ArrowDown } from "lucide-react";
 import { QuestEditorDialog } from "@/components/admin/QuestEditorDialog";
+import { AiQuestGeneratorDialog } from "@/components/admin/AiQuestGeneratorDialog";
 import { createCreatorQuest, updateCreatorQuest, reorderCreatorPathQuests, fetchCreatorQuestDetail } from "@/api/backend";
 import { motion } from "framer-motion";
 import {
@@ -30,7 +31,8 @@ const CreatorDashboard = () => {
   const [availableQuests, setAvailableQuests] = useState<QuestSummaryDto[]>([]);
   const [selectedQuestId, setSelectedQuestId] = useState<string>("");
   const [draftPrefill, setDraftPrefill] = useState<any | null>(null);
-  const [draftLoading, setDraftLoading] = useState(false);
+  const [aiDraftOpen, setAiDraftOpen] = useState(false);
+  const [aiDraftLanguage, setAiDraftLanguage] = useState<string | null>(null);
   const [preselectedPathId, setPreselectedPathId] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingQuest, setEditingQuest] = useState<any | null>(null);
@@ -157,41 +159,14 @@ const CreatorDashboard = () => {
                             <p className="text-sm text-muted-foreground line-clamp-1">{path.description}</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Button variant="outline" onClick={async () => {
-                              // AI draft flow: prompt for a topic and minimal options, then open editor with prefill
-                              const topic = window.prompt("AI draft topic (e.g. string parsing)");
-                              if (!topic) return;
-                              const bugType = window.prompt("Bug type (e.g. off-by-one)") || "bug";
-                              const difficultyStr = window.prompt("Difficulty 1-3", "1") || "1";
-                              const difficulty = Math.min(3, Math.max(1, parseInt(difficultyStr, 10) || 1));
-                              setDraftLoading(true);
-                              try {
-                                const draft = await generateCreatorQuestDraft({
-                                  topic,
-                                  difficulty,
-                                  bug_type: bugType,
-                                  extra_instructions: null,
-                                  language: path.language ?? "python",
-                                });
-                                setDraftPrefill({
-                                  title: draft.title,
-                                  description: draft.description,
-                                  level: draft.level,
-                                  initial_code: draft.initial_code,
-                                  solution_code: draft.solution_code,
-                                  explanation: draft.explanation,
-                                  tags: draft.tags,
-                                  expected_output: draft.expected_output,
-                                });
-                                setEditingQuest(null);
+                            <Button
+                              variant="outline"
+                              onClick={() => {
                                 setPreselectedPathId(path.id);
-                                setEditorOpen(true);
-                              } catch (e) {
-                                toast({ title: "AI draft failed", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
-                              } finally {
-                                setDraftLoading(false);
-                              }
-                            }}>
+                                setAiDraftLanguage(path.language ?? "python");
+                                setAiDraftOpen(true);
+                              }}
+                            >
                               <Plus className="mr-2 h-4 w-4" />
                               AI Draft
                             </Button>
@@ -307,6 +282,27 @@ const CreatorDashboard = () => {
         updateQuestFn={updateCreatorQuest}
         prefill={draftPrefill}
         preselectedPathId={preselectedPathId}
+      />
+
+      <AiQuestGeneratorDialog
+        open={aiDraftOpen}
+        onOpenChange={setAiDraftOpen}
+        language={aiDraftLanguage}
+        generateDraft={generateCreatorQuestDraft}
+        onDraft={(draft) => {
+          setDraftPrefill({
+            title: draft.title,
+            description: draft.description,
+            level: draft.level,
+            initial_code: draft.initial_code,
+            solution_code: draft.solution_code,
+            explanation: draft.explanation,
+            tags: draft.tags,
+            expected_output: draft.expected_output,
+          });
+          setEditingQuest(null);
+          setEditorOpen(true);
+        }}
       />
     </div>
   );

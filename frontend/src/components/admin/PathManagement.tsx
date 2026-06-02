@@ -360,6 +360,8 @@ const LANGUAGE_OPTIONS: { value: string; label: string }[] = [
   { value: "c", label: "C" },
 ];
 
+const NO_CHECKPOINT_QUEST = "__none__";
+
 const PathEditorDialog = ({
   open,
   onOpenChange,
@@ -525,18 +527,21 @@ const PathEditorDialog = ({
               className="mt-1"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Leave blank to keep the current creator assignment. Enter an email to invite or assign a creator for this learning path.
+              Leave blank to keep the current creator assignment. Enter an email to invite or replace the pending creator invite for this learning path.
             </p>
           </div>
           {mode !== "assign" && (
           <div>
             <label className="text-sm font-medium">Checkpoint quest (optional)</label>
-            <Select value={checkpointQuest ?? ""} onValueChange={(v) => setCheckpointQuest(v || null)}>
+            <Select
+              value={checkpointQuest ?? NO_CHECKPOINT_QUEST}
+              onValueChange={(v) => setCheckpointQuest(v === NO_CHECKPOINT_QUEST ? null : v)}
+            >
               <SelectTrigger className="mt-1">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value={NO_CHECKPOINT_QUEST}>None</SelectItem>
                 {allQuests
                   .filter((q) => !q.is_deleted)
                   .map((q) => (

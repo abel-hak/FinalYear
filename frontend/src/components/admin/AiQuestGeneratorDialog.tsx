@@ -11,7 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Sparkles } from "lucide-react";
-import { generateAdminQuestDraft, type AdminQuestAIDraftResponseDto } from "@/api/backend";
+import {
+  generateAdminQuestDraft,
+  type AdminQuestAIDraftRequestDto,
+  type AdminQuestAIDraftResponseDto,
+} from "@/api/backend";
 import { useToast } from "@/components/ui/use-toast";
 
 export function AiQuestGeneratorDialog({
@@ -19,12 +23,14 @@ export function AiQuestGeneratorDialog({
   onOpenChange,
   defaultDifficulty = 1,
   language = null,
+  generateDraft,
   onDraft,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultDifficulty?: number;
   language?: string | null;
+  generateDraft?: (payload: AdminQuestAIDraftRequestDto) => Promise<AdminQuestAIDraftResponseDto>;
   onDraft: (draft: AdminQuestAIDraftResponseDto) => void;
 }) {
   const { toast } = useToast();
@@ -45,7 +51,8 @@ export function AiQuestGeneratorDialog({
     }
     setLoading(true);
     try {
-      const draft = await generateAdminQuestDraft({
+      const draftFn = generateDraft ?? generateAdminQuestDraft;
+      const draft = await draftFn({
         topic: topic.trim(),
         difficulty,
         bug_type: bugType.trim(),

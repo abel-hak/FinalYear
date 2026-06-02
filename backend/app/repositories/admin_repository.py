@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from sqlalchemy import func, select, text
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -241,6 +242,43 @@ class AdminRepository:
         await self.db.delete(path_quest)
         await self.db.commit()
 
+    async def create_or_replace_creator_invitation(
+        self,
+        *,
+        path_id,
+        email: str,
+        token_hash: str,
+        expires_at,
+        created_by,
+    ) -> CreatorInvitation:
+        now = datetime.now(timezone.utc)
+        stmt = insert(CreatorInvitation).values(
+            path_id=path_id,
+            email=email,
+            token_hash=token_hash,
+            expires_at=expires_at,
+            created_by=created_by,
+            created_at=now,
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[CreatorInvitation.path_id],
+            set_={
+                "email": email,
+                "token_hash": token_hash,
+                "expires_at": expires_at,
+                "created_by": created_by,
+                "created_at": now,
+                "accepted_at": None,
+                "accepted_by_user_id": None,
+            },
+        )
+        await self.db.execute(stmt)
+        await self.db.commit()
+        result = await self.db.execute(
+            select(CreatorInvitation).where(CreatorInvitation.path_id == path_id)
+        )
+        return result.scalar_one()
+
     async def create_creator_invitation(
         self,
         *,
@@ -250,17 +288,13 @@ class AdminRepository:
         expires_at,
         created_by,
     ) -> CreatorInvitation:
-        invitation = CreatorInvitation(
+        return await self.create_or_replace_creator_invitation(
             path_id=path_id,
             email=email,
             token_hash=token_hash,
             expires_at=expires_at,
             created_by=created_by,
         )
-        self.db.add(invitation)
-        await self.db.commit()
-        await self.db.refresh(invitation)
-        return invitation
 
     async def find_active_creator_invitation_by_token_hash(self, token_hash: str) -> CreatorInvitation | None:
         result = await self.db.execute(

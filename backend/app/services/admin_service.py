@@ -177,7 +177,7 @@ class AdminService:
         token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
         settings = get_settings()
         expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.email_verification_otp_ttl_minutes)
-        await self.repo.create_creator_invitation(
+        await self.repo.create_or_replace_creator_invitation(
             path_id=path.id,
             email=creator_email,
             token_hash=token_hash,

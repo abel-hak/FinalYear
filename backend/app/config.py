@@ -36,13 +36,8 @@ class Settings(BaseSettings):
     email_verification_max_attempts: int = 3
     password_reset_otp_ttl_minutes: int = 5
     password_reset_max_attempts: int = 3
-    smtp_host: str | None = None
-    smtp_port: int = 587
-    smtp_user: str | None = None
-    smtp_password: str | None = None
-    smtp_use_tls: bool = True
-    smtp_from_email: str = "codequest@dev.com"
-    smtp_timeout_seconds: int = 10
+    resend_api_key: str | None = None
+    resend_from_email: str | None = None
 
     # Google sign-in
     google_client_id: str | None = None

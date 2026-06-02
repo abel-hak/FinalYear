@@ -37,32 +37,32 @@ const AdminDashboard = () => {
           label: 'Total Users',
           value: stats.total_users.toLocaleString(),
           icon: Users,
-          gradient: 'from-sky-500/20 via-cyan-500/15 to-transparent',
-          accent: 'text-cyan-300',
+          gradient: 'from-sky-500/15 via-cyan-500/10 to-transparent',
+          accent: 'text-cyan-500',
           border: 'border-cyan-500/25',
         },
         {
           label: 'Quests Completed',
           value: stats.quests_completed.toLocaleString(),
           icon: Trophy,
-          gradient: 'from-amber-500/20 via-orange-500/15 to-transparent',
-          accent: 'text-amber-200',
+          gradient: 'from-amber-500/15 via-orange-500/10 to-transparent',
+          accent: 'text-amber-500',
           border: 'border-amber-500/25',
         },
         {
           label: 'Total Quests',
           value: stats.total_quests.toLocaleString(),
           icon: FileText,
-          gradient: 'from-emerald-500/20 via-teal-500/15 to-transparent',
-          accent: 'text-emerald-200',
+          gradient: 'from-emerald-500/15 via-teal-500/10 to-transparent',
+          accent: 'text-emerald-500',
           border: 'border-emerald-500/25',
         },
         {
           label: 'Completion Rate',
           value: `${stats.completion_rate_pct}%`,
           icon: Target,
-          gradient: 'from-fuchsia-500/20 via-pink-500/15 to-transparent',
-          accent: 'text-fuchsia-200',
+          gradient: 'from-fuchsia-500/15 via-pink-500/10 to-transparent',
+          accent: 'text-fuchsia-500',
           border: 'border-fuchsia-500/25',
         },
       ]
@@ -106,18 +106,17 @@ const AdminDashboard = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
                 >
-                  <Card className={`relative overflow-hidden ${stat.border} bg-slate-950/60 backdrop-blur-xl shadow-[0_18px_60px_-30px_rgba(15,23,42,0.95)] hover:-translate-y-1 transition-all duration-300`}>
+                  <Card className={`relative overflow-hidden ${stat.border} bg-card/60 backdrop-blur-xl shadow-lg hover:-translate-y-1 transition-all duration-300`}>
                     <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-100`} />
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.07),transparent_45%)]" />
                     <CardContent className="p-6 relative z-10">
                       <div className="flex items-center justify-between mb-4">
-                        <div className="p-3 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10">
+                        <div className="p-3 rounded-xl bg-foreground/5 backdrop-blur-sm border border-border/60">
                           <stat.icon className={`w-6 h-6 ${stat.accent}`} />
                         </div>
                       </div>
                       <div>
-                        <p className="text-3xl font-bold tracking-tight text-slate-50 mb-1">{stat.value}</p>
-                        <p className="text-sm font-medium text-slate-300">{stat.label}</p>
+                        <p className="text-3xl font-bold tracking-tight text-foreground mb-1">{stat.value}</p>
+                        <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
                       </div>
                     </CardContent>
                   </Card>
