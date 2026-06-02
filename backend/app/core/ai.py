@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import re
 import time
 
 import httpx
@@ -50,6 +51,33 @@ def _language_for_prompt(language: str | None) -> tuple[str, str]:
         "typescript": "TypeScript",
     }.get(key, key.replace("_", " ").title() if key else "the programming language")
     return fence, human
+
+
+def _parse_json_from_llm_text(text: str) -> dict:
+    """Parse a JSON object from LLM output that may include markdown fences or extra prose."""
+    if not text or not text.strip():
+        raise ValueError("empty response")
+
+    stripped = text.strip()
+    fence_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", stripped, re.DOTALL | re.IGNORECASE)
+    if fence_match:
+        stripped = fence_match.group(1).strip()
+
+    try:
+        parsed = json.loads(stripped)
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+
+    start = stripped.find("{")
+    end = stripped.rfind("}")
+    if start != -1 and end > start:
+        parsed = json.loads(stripped[start : end + 1])
+        if isinstance(parsed, dict):
+            return parsed
+
+    raise ValueError("response is not a JSON object")
 
 
 def _cache_key(
@@ -277,7 +305,7 @@ async def generate_admin_quest_draft(
                 data = resp.json()
 
             text = data["choices"][0]["message"]["content"]
-            draft = json.loads(text)
+            draft = _parse_json_from_llm_text(text)
             _note_success()
             return draft
         except httpx.HTTPStatusError as exc:
@@ -295,6 +323,10 @@ async def generate_admin_quest_draft(
                 continue
             _note_failure()
             raise RuntimeError("AI is temporarily unavailable. Please try again in a few moments.") from exc
+        except (json.JSONDecodeError, ValueError) as exc:
+            last_exc = exc
+            _note_failure()
+            raise RuntimeError("AI returned an invalid quest draft format. Please try again.") from exc
         except Exception as exc:
             last_exc = exc
             _note_failure()
@@ -376,7 +408,7 @@ async def generate_failure_explanation(
                 data = resp.json()
 
             text = data["choices"][0]["message"]["content"]
-            parsed = json.loads(text)
+            parsed = _parse_json_from_llm_text(text)
             _note_success()
             return parsed
         except httpx.HTTPStatusError as exc:
@@ -394,6 +426,10 @@ async def generate_failure_explanation(
                 continue
             _note_failure()
             raise RuntimeError("AI is temporarily unavailable. Please try again in a few moments.") from exc
+        except (json.JSONDecodeError, ValueError) as exc:
+            last_exc = exc
+            _note_failure()
+            raise RuntimeError("AI returned an invalid explanation format. Please try again.") from exc
         except Exception as exc:
             last_exc = exc
             _note_failure()
